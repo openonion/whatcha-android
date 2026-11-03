@@ -20,6 +20,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 10 | Read-aloud cannot be stopped | open |
 | R1 | README said the agent answers in the child's voice | **done** |
 | S1 | 小乐 tells parents to speak to the phone; the app has no voice input | **done** |
+| R2 | READMEs describe the app as it was at 21:00 | **done** |
 
 ## 1. A message sent while the link is down is lost
 
@@ -175,6 +176,17 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   screen, list the no-lost-message fix, and update the roadmap. Removed two screenshots (scrambled input;
   a made-up reply). Repo topics added. Draft PR #2 opened so CI runs on this branch: run 41626130558 green,
   including "A packed APK still verifies". Rendered README checked through the GitHub API: the image resolves.
+
+## R2. READMEs describe the app as it was at 21:00
+
+- **Evidence.** *Read* 2026-11-04 06:10: neither README mentioned the icon, the typing title, the grey error
+  line, the empty-chat hint, resuming after a kill, or the skill's benchmark; both said "checked against
+  1.9.3rc32" (tonight's checks used rc35); the roadmap said "the agent transcribes" as if decided, while it
+  is a question for Aaron. PR #2's description stopped at round 1.
+- **Done 2026-11-04 06:10.** Both READMEs list what works now, in the same order, with the rc35 check date;
+  the 小乐 section adds the "only what the app can do" rule and how to run the benchmark; the roadmap says
+  who transcribes is not decided. PR #2's description rewritten. No unit test (documentation only);
+  verified by reading both pages as GitHub renders them on `wechat-look`.
 
 ## A1. Picture avatars instead of a letter (Aaron, 22:15)
 
