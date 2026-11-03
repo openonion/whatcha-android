@@ -1,0 +1,25 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and unit test
+        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest
+      # The pairing entry must not break the APK signature, or the phone refuses to install it.
+      - name: A packed APK still verifies
+        run: |
+          python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk packed.apk --agent 0xci --invite ci
+          "$ANDROID_HOME"/build-tools/$(ls "$ANDROID_HOME"/build-tools | sort -V | tail -1)/apksigner verify packed.apk
