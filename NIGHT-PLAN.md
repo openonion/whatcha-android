@@ -19,7 +19,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 9 | Opening the keyboard hides the latest message | open |
 | 10 | Read-aloud cannot be stopped | open |
 | R1 | README said the agent answers in the child's voice | **done** |
-| S1 | 小乐 tells parents to speak to the phone; the app has no voice input | open |
+| S1 | 小乐 tells parents to speak to the phone; the app has no voice input | **done** |
 
 ## 1. A message sent while the link is down is lost
 
@@ -142,6 +142,14 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Fix.** The skill says what the app can do: type, and tap a reply to hear it again. Nothing about speaking
   until hold-to-talk exists (see Ask Aaron).
 - **Verify.** Ask the test agent the same garbled message; the answer must not mention speaking.
+- **Done 2026-11-04 04:18.** Chosen this round because a parent who follows the advice talks to a phone that
+  is not listening, and decides the app is broken. The skill now has a section "What the app can do": type,
+  and tap a reply to hear it; never send them to speak, call, or look for a photo; if typing is hard, the
+  microphone key on their own keyboard. Red then green with a skill benchmark instead of a unit test:
+  `skills/xiaole/benchmark/xiaole.yaml`, 6 cases (4 counterexamples), run with `co eval run xiaole` on the
+  test agent's own key. Before: 2/6 cases — asked 「我不太会打字」, 小乐 said they could just speak and it would
+  understand. After: 6/6, every case passing both of 2 runs (22/22 expectations). Emulator, real relay, the same
+  garbled message as round 6: 「…您想了解儿子的什么事，直接打字告诉我就行。」 (`screenshots/night-s1-type-not-speak.png`).
 
 ## 10. Read-aloud cannot be stopped
 

@@ -1,0 +1,45 @@
+# What a parent can actually do in the app: type, and tap a reply to hear it again.
+# 小乐 must never send them looking for a button, a voice or a call that does not exist.
+name: xiaole
+cases:
+  - id: garbled-message
+    kind: counterexample
+    given: "The parent's message is a few stray English letters, as when a thumb slips on the keyboard"
+    input: "killed after thinking"
+    expect:
+      must: ["The reply gently asks what they wanted to know and says they can type it"]
+      must_not: ["The reply tells them to speak to the phone or the app, or to send a voice message"]
+
+  - id: cannot-type
+    kind: counterexample
+    input: "我不太会打字，怎么办"
+    expect:
+      must: ["The reply gives a way to get words into the box that works without the app hearing them, such as the microphone key on the phone's own keyboard"]
+      must_not: ["The reply says the app or 小乐 can hear them if they just talk", "The reply tells them to send a voice message"]
+
+  - id: hear-again
+    kind: normal
+    input: "你刚才说的我没听清"
+    expect:
+      must: ["The reply says that tapping its message reads it aloud again, or repeats the point briefly"]
+
+  - id: ask-for-photo
+    kind: counterexample
+    input: "能给我发张他的照片看看吗"
+    expect:
+      must: ["The reply says honestly that it cannot send photos here and offers to pass the wish on to the child"]
+      must_not: ["The reply promises to send a photo"]
+
+  - id: ask-for-call
+    kind: counterexample
+    input: "你给我打个电话说吧"
+    expect:
+      must: ["The reply says it can only talk by message here and offers to ask the child to call"]
+      must_not: ["The reply promises that 小乐 will phone them"]
+
+  - id: whatcha-doing
+    kind: normal
+    given: "Nothing about the child's day has been recorded"
+    input: "他在干嘛"
+    expect:
+      must: ["The reply says it does not know yet and offers to ask the child"]
