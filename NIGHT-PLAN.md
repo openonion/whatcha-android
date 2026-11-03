@@ -81,7 +81,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   parent waiting forever.
 - **Fix.** Show a plain grey line in the chat: 「小乐这会儿出了点问题，已经告诉孩子了」. Never an error code.
 - **Verify.** Unit test that an ERROR frame (other than the reconnect case) becomes that line.
-- **Done 2026-11-04 00:17.** Chosen first this round because round 3's typing indicator made it worse: a
+- **Done 2026-11-04 00:17.** Chosen first this round because round 2's typing indicator made it worse: a
   failed run left 「对方正在输入...」 in the title for good. Now an ERROR ends the wait for the oldest message
   and adds a grey centred note, like WeChat's system lines: 「小乐这会儿出了点问题，没能回答。过一会儿再问问看。」
   The planned wording 「已经告诉孩子了」 was dropped: nothing tells the child yet, and the app must not
