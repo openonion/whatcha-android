@@ -112,8 +112,12 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
     LazyColumn(modifier.fillMaxWidth(), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(Modifier.size(4.dp)) }
         items(newestFirst(lines)) { row ->
-            if (row.showTime) TimeLabel(row.line.at)
-            if (row.line.note) Note(row.line.text) else Bubble(row.line, agentName, onReplay)
+            // One Column per row: in a reversed list, loose siblings are stacked bottom-up too,
+            // which put the time label under its message.
+            Column {
+                if (row.showTime) TimeLabel(row.line.at)
+                if (row.line.note) Note(row.line.text) else Bubble(row.line, agentName, onReplay)
+            }
         }
         item { Spacer(Modifier.size(4.dp)) }
     }

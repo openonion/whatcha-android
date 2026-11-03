@@ -145,6 +145,12 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   app to read. The list is now laid out from the bottom (`reverseLayout`), as WeChat's is; the auto-scroll
   code is gone. `NewestFirstTest` failed to compile before, passes after. Emulator, 2× font, keyboard open:
   `screenshots/night-09-keyboard.png` (left before, right after; the end of the reply stays above the box).
+- **Regression, fixed 2026-11-04 06:13.** The #9 change put every time label *under* its message: in a reversed
+  list, an item's loose children are stacked bottom-up as well. Round 8's screenshots missed it because the
+  label of a long chat was scrolled off. Caught while checking the README screenshot against the app. Each
+  row is now one `Column`. No unit test can see this (it is composition order; there is no Compose UI test
+  set up), so the evidence is the emulator: `screenshots/night-09b-time-label.png`, left before, right after.
+  Also seen there: a short chat still sits at the top, as in WeChat.
 
 ## S1. 小乐 promises voice input the app does not have
 
