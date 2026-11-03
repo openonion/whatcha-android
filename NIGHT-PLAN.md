@@ -13,7 +13,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 3 | Nothing shows that 小乐 is replying | **done** |
 | 4 | No app icon: the home screen shows Android's default robot | **done** |
 | 5 | An agent error is swallowed: the parent waits forever | **done** |
-| 6 | First screen is empty: nothing says what to do | open |
+| 6 | First screen is empty: nothing says what to do | **done** |
 | 7 | Large system font never tried | open |
 | 8 | A reply that arrives after the app was killed is lost | open |
 | 9 | Opening the keyboard hides the latest message | open |
@@ -47,6 +47,9 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   WeChat shows a spinner, then a red ! to tap and resend.
 - **Fix.** A pending line shows a small grey spinner beside the bubble; after 60 s without a reply,
   a red ! that resends on tap.
+- **Smaller since #1 and #5 (2026-11-04).** Unsent messages now go out by themselves on reconnect, the
+  header says 「暂时联系不上」 while the link is down, and a failed run ends in a grey note. So no red !
+  to tap is needed; what is left is a grey spinner beside a message still in the queue.
 - **Verify.** Unit test on the state; screenshot with the host stopped.
 
 ## 3. Nothing shows that 小乐 is replying
@@ -65,7 +68,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   robot, and parents find apps by their picture.
 - **Fix.** An adaptive icon: WeChat-green square, white speech bubble, the label 在干嘛.
 - **Verify.** Screenshot of the launcher.
-- **Done 2026-11-04 01:15.** Chosen over #6 because the icon is how a parent finds the app every time they
+- **Done 2026-11-04 01:12.** Chosen over #6 because the icon is how a parent finds the app every time they
   open it; the empty screen is seen once. An adaptive icon drawn as a vector, so it is sharp at every size
   and survives any launcher's mask (EMUI's included): WeChat green `#07C160`, one white speech bubble with
   three dots. It reads as "chat" without copying WeChat's own two-bubble logo. The label stays 在干嘛.
@@ -93,6 +96,11 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Evidence.** *Seen*: after pairing, the chat is a blank grey page.
 - **Fix.** While the chat is empty, a centred grey hint: 「想知道孩子在干嘛，就在下面打字问小乐」, with the agent's name.
 - **Verify.** Screenshot on first launch.
+- **Done 2026-11-04 02:11.** Chosen over #2 because every parent meets it, and alone with a blank page a
+  parent may never type at all. Until the first message, the chat area shows, centred and grey,
+  「想知道孩子在干嘛，就在下面打字问小乐」 with the agent's own name. No hint when the app is not paired,
+  because then there is no box to type into. `EmptyHintTest` (3) failed to compile before, passes after.
+  Emulator, fresh install, real relay: `screenshots/night-06-first-screen.png`.
 
 ## 7. Large system font never tried
 

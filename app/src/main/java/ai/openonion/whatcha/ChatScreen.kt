@@ -68,7 +68,9 @@ fun ChatScreen(vm: ChatViewModel) {
 
     Column(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
         Header(headerTitle(title, lines), status)
-        Conversation(lines, title, onReplay = vm::speak, modifier = Modifier.weight(1f))
+        val hint = emptyHint(title, lines, status)
+        if (hint != null) EmptyHint(hint, Modifier.weight(1f))
+        else Conversation(lines, title, onReplay = vm::speak, modifier = Modifier.weight(1f))
         if (status != Status.UNPAIRED) Composer(onSend = vm::send)
     }
 }
@@ -80,6 +82,17 @@ private fun Header(title: String, status: Status) {
         statusText(status)?.let { Text(it, style = Small) }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
+}
+
+// A blank grey page gives a parent no reason to type; say what this is for until the first message.
+internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? =
+    if (lines.isEmpty() && status != Status.UNPAIRED) "想知道孩子在干嘛，\n就在下面打字问$name" else null
+
+@Composable
+private fun EmptyHint(hint: String, modifier: Modifier) {
+    Box(modifier.fillMaxWidth().padding(horizontal = 40.dp), contentAlignment = Alignment.Center) {
+        Text(hint, style = Body.copy(color = Color.Gray), textAlign = TextAlign.Center)
+    }
 }
 
 // WeChat's own words while the other side is writing, so the parent knows to wait.
