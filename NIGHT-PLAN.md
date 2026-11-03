@@ -10,7 +10,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 |---|---|---|
 | 1 | A message sent while the link is down is lost | **done** |
 | 2 | No sign that a message is sending or failed to send | open |
-| 3 | Nothing shows that 小乐 is replying | open |
+| 3 | Nothing shows that 小乐 is replying | **done** |
 | 4 | No app icon: the home screen shows Android's default robot | open |
 | 5 | An agent error is swallowed: the parent waits forever | open |
 | 6 | First screen is empty: nothing says what to do | open |
@@ -54,6 +54,10 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Evidence.** *Seen*: a reply took about 10 s and the screen did nothing meanwhile. Parents resend or give up.
 - **Fix.** Like WeChat's 「对方正在输入…」: while a message waits for its reply, the title reads 「小乐正在输入…」.
 - **Verify.** Screenshot taken during the wait.
+- **Done 2026-11-03 23:15.** Chosen this round over #2 and #4 because it happens on every single message.
+  The title shows WeChat's exact words 「对方正在输入...」 while any message is SENT and unanswered, then the
+  agent's name again. `HeaderTest` (2) failed to compile before, passes after. Emulator, real relay:
+  `screenshots/night-03-typing.png` — left 1 s after sending, right after the reply.
 
 ## 4. No app icon
 

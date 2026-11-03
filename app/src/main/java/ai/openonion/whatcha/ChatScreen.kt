@@ -67,7 +67,7 @@ fun ChatScreen(vm: ChatViewModel) {
     val status by vm.status.collectAsState()
 
     Column(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
-        Header(title, status)
+        Header(headerTitle(title, lines), status)
         Conversation(lines, title, onReplay = vm::speak, modifier = Modifier.weight(1f))
         if (status != Status.UNPAIRED) Composer(onSend = vm::send)
     }
@@ -81,6 +81,10 @@ private fun Header(title: String, status: Status) {
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
 }
+
+// WeChat's own words while the other side is writing, so the parent knows to wait.
+internal fun headerTitle(name: String, lines: List<Line>): String =
+    if (lines.any { it.delivery == Delivery.SENT }) "对方正在输入..." else name
 
 // The parent only ever sees a plain sentence, never an error code.
 private fun statusText(status: Status): String? = when (status) {
