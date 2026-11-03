@@ -18,6 +18,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 8 | A reply that arrives after the app was killed is lost | open |
 | 9 | Opening the keyboard hides the latest message | open |
 | 10 | Read-aloud cannot be stopped | open |
+| R1 | README said the agent answers in the child's voice | **done** |
 
 ## 1. A message sent while the link is down is lost
 
@@ -100,6 +101,15 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Evidence.** *Read*: every reply is spoken; tapping a bubble starts it again; nothing stops it.
 - **Fix.** Tapping the bubble that is speaking stops it.
 - **Verify.** Unit test on the toggle.
+
+## R1. README said the agent answers in the child's voice
+
+- **Evidence.** Both READMEs: "the agent answers in the child's voice" / 「它用子女的口吻回答」, and claimed the
+  child can join the chat, which nothing implements. The opposite of 小乐's first rule.
+- **Done 2026-11-03 22:25** (dc368bd). Both READMEs now describe 小乐, link its skill, show the WeChat-style
+  screen, list the no-lost-message fix, and update the roadmap. Removed two screenshots (scrambled input;
+  a made-up reply). Repo topics added. Draft PR #2 opened so CI runs on this branch: run 41626130558 green,
+  including "A packed APK still verifies". Rendered README checked through the GitHub API: the image resolves.
 
 ## Ask Aaron in the morning
 
