@@ -20,13 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -109,18 +107,23 @@ private fun statusText(status: Status): String? = when (status) {
 
 @Composable
 private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, modifier: Modifier) {
-    val listState = rememberLazyListState()
-    LaunchedEffect(lines.size) { if (lines.isNotEmpty()) listState.animateScrollToItem(lines.lastIndex) }
-    LazyColumn(modifier.fillMaxWidth(), state = listState, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    // Laid out from the bottom, as WeChat is: the end of the latest line stays in view when it is long,
+    // when a new one arrives, and when the keyboard opens and the list gets shorter.
+    LazyColumn(modifier.fillMaxWidth(), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(Modifier.size(4.dp)) }
-        itemsIndexed(lines) { i, line ->
-            // Like WeChat: a grey time line when five minutes have passed since the last message.
-            if (i == 0 || line.at - lines[i - 1].at > TimeGapMillis) TimeLabel(line.at)
-            if (line.note) Note(line.text) else Bubble(line, agentName, onReplay)
+        items(newestFirst(lines)) { row ->
+            if (row.showTime) TimeLabel(row.line.at)
+            if (row.line.note) Note(row.line.text) else Bubble(row.line, agentName, onReplay)
         }
         item { Spacer(Modifier.size(4.dp)) }
     }
 }
+
+internal class Row(val line: Line, val showTime: Boolean)
+
+// Like WeChat: a grey time line when five minutes have passed since the line before.
+internal fun newestFirst(lines: List<Line>): List<Row> =
+    lines.indices.reversed().map { i -> Row(lines[i], i == 0 || lines[i].at - lines[i - 1].at > TimeGapMillis) }
 
 @Composable
 private fun Note(text: String) {

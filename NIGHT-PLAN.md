@@ -14,9 +14,9 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 4 | No app icon: the home screen shows Android's default robot | **done** |
 | 5 | An agent error is swallowed: the parent waits forever | **done** |
 | 6 | First screen is empty: nothing says what to do | **done** |
-| 7 | Large system font never tried | open |
+| 7 | Large system font never tried | **checked: holds** |
 | 8 | A reply that arrives after the app was killed is lost | **done** |
-| 9 | Opening the keyboard hides the latest message | open |
+| 9 | Opening the keyboard hides the latest message | **done** |
 | 10 | Read-aloud cannot be stopped | open |
 | R1 | README said the agent answers in the child's voice | **done** |
 | S1 | 小乐 tells parents to speak to the phone; the app has no voice input | **done** |
@@ -110,6 +110,12 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Fix.** Whatever the screenshots show.
 - **Verify.** Screenshots at font scale 1.3 and 2.0.
 
+## 7. Large system font (checked)
+
+- **Checked 2026-11-04 05:12.** Emulator at font scale 1.3 and 2.0 (Android's largest) with a real reply:
+  text wraps, bubbles grow, the 发送 button still fits beside the box. Nothing to fix; the one problem seen
+  was #9. The emulator's own font setting was put back afterwards.
+
 ## 8. A reply that arrives after the app was killed is lost
 
 - **Evidence.** *Read*: `AgentLink.sessionId` lives in memory only. Huawei kills background apps; the
@@ -134,6 +140,12 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Evidence.** *Read*: the list scrolls only when a line is added. WeChat jumps to the bottom when the keyboard opens.
 - **Fix.** Scroll to the last line when the input gets focus.
 - **Verify.** Screenshot with the keyboard open on a long chat.
+- **Done 2026-11-04 05:13.** Found while checking #7: at 2× font, opening the keyboard covered 小乐's reply,
+  and even without it a long reply showed its top and hid its end, because the list scrolled to the *top*
+  of the last line. Chosen over the README this round because it hides the one thing the parent opened the
+  app to read. The list is now laid out from the bottom (`reverseLayout`), as WeChat's is; the auto-scroll
+  code is gone. `NewestFirstTest` failed to compile before, passes after. Emulator, 2× font, keyboard open:
+  `screenshots/night-09-keyboard.png` (left before, right after; the end of the reply stays above the box).
 
 ## S1. 小乐 promises voice input the app does not have
 
