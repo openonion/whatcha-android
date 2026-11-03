@@ -21,6 +21,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | R1 | README said the agent answers in the child's voice | **done** |
 | S1 | 小乐 tells parents to speak to the phone; the app has no voice input | **done** |
 | R2 | READMEs describe the app as it was at 21:00 | **done** |
+| V1 | Hold-to-talk (Aaron, 2026-11-04 morning: send the voice as it is, our AI transcribes after) | **done** |
 
 ## 1. A message sent while the link is down is lost
 
@@ -207,10 +208,34 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   teacup and a plant. No human faces, so nothing looks like the child. Defaults: the robot for 小乐 (it
   says "AI" at a glance) and the teacup for the parent. Emulator screenshot `screenshots/chat.png`.
 
+## V1. Hold-to-talk
+
+- **Ask.** Aaron, 2026-11-04 10:15: 「按住说话先不用转文字，你直接按语音发出去吧。转文字要我们这边的 AI 来转」.
+- **App.** WeChat's round button left of the box switches to 「按住 说话」 (remembered). Holding shows the dark
+  「松开 发送」 card; letting go sends the AAC recording as a file in the signed INPUT (`files`, which the host saves
+  under `.co/uploads/`). Under a second: dropped, 「说话时间太短」. At 60 s it sends by itself. The voice bubble shows
+  `4″` and a wave, wider when longer; a tap plays it, a second tap stops it. Queued like text while the link is down.
+- **Agent.** `skills/xiaole/voice.py`: `transcribe_voice`, converting to mp3 first (the service rejected AAC:
+  `Invalid audio format "mp4" ... Valid formats are: [wav, mp3]`) and checking for silence first.
+- **Tests.** `VoiceTest` (5) and `WireTest` (+2) failed first (nothing existed), then passed; `EmptyHintTest`
+  updated red then green for 「…打字说话都行」. 37 tests.
+- **Skill, red then green.** A 4 s Chinese recording (「他今天几点下班？晚上回不回家吃饭？」, macOS `say`) sent the way the
+  host sends it. Before: 「这里我听不到语音，您可以按键盘上的小话筒…」. After: 「他今天还没跟我说几点下班、回不回家吃饭，我这就帮你问问他」.
+  Benchmark updated (cannot-type now points to 按住 说话): 6/6, both runs, 20/20.
+- **Found on the way.** The emulator's microphone records pure silence (−91 dB). Sent that, the transcription
+  service invented 「娃娃要参加高考」 and, on a second try, a child who will not eat; 小乐 answered the invented
+  question. Hence the silence check. After it: 「刚才那条语音好像没录上声音，您按住说话重新说一遍」.
+- **Emulator, real relay.** `screenshots/voice-recording.png` (holding; taken before the hint change),
+  `voice-too-short.png`, `voice-reply.png` (the silent message and 小乐's answer), `night-06-first-screen.png`
+  (new hint). Host log: `↑ 1 file(s): …m4a`, 6.27 s, 28 KB. Bubble playback read from `dumpsys audio`: tap 1
+  MediaPlayer `started`, tap 2 gone. Real speech through the emulator could not be tested: it has no microphone input.
+
 ## Ask Aaron in the morning
 
 - Default avatars: robot for 小乐 and teacup for the parent, or another pair from `design/avatars/candidates.jpg`?
 
-- Hold-to-talk is the biggest gap and is not on this list, because it needs a decision: record on the
-  phone and have the agent transcribe (`co asr`), or not. Huawei phones have no Google speech service.
+- ~~Hold-to-talk: who transcribes?~~ Answered 2026-11-04 10:15: send the recording as it is; the agent
+  transcribes afterwards. Done as V1.
+- Photos and videos: parents like sending them. Photos fit the host's `images` input as they are; videos
+  are larger than the host's 10 MB default per file. Photos first?
 - Can the APK's pairing invite code be reused for a second phone (the other parent)? Today it can.

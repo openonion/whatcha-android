@@ -1,5 +1,6 @@
-# What a parent can actually do in the app: type, and tap a reply to hear it again.
-# 小乐 must never send them looking for a button, a voice or a call that does not exist.
+# What a parent can actually do in the app: type, hold to talk, and tap a reply to hear it again.
+# 小乐 must never send them looking for a button or a call that does not exist.
+# Voice messages carry an audio file, which this format cannot attach; check those by sending one for real.
 name: xiaole
 cases:
   - id: garbled-message
@@ -7,15 +8,15 @@ cases:
     given: "The parent's message is a few stray English letters, as when a thumb slips on the keyboard"
     input: "killed after thinking"
     expect:
-      must: ["The reply gently asks what they wanted to know and says they can type it"]
-      must_not: ["The reply tells them to speak to the phone or the app, or to send a voice message"]
+      must: ["The reply gently asks what they wanted to know"]
+      must_not: ["The reply guesses at a meaning and answers that instead"]
 
   - id: cannot-type
     kind: counterexample
     input: "我不太会打字，怎么办"
     expect:
-      must: ["The reply gives a way to get words into the box that works without the app hearing them, such as the microphone key on the phone's own keyboard"]
-      must_not: ["The reply says the app or 小乐 can hear them if they just talk", "The reply tells them to send a voice message"]
+      must: ["The reply tells them to hold the 按住 说话 button and talk, and that letting go sends it"]
+      must_not: ["The reply says 小乐 cannot hear voice messages"]
 
   - id: hear-again
     kind: normal

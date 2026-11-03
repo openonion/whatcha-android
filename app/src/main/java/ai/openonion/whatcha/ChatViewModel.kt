@@ -3,6 +3,7 @@ package ai.openonion.whatcha
 import android.app.Application
 import android.speech.tts.TextToSpeech
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 import java.util.Locale
 
 enum class Status { UNPAIRED, CONNECTING, ONLINE, OFFLINE }
@@ -26,6 +28,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val link = pairing?.let { AgentLink(it, Wire(Identity.load(app), it.agent), this, prefs.getString("session", null)) }
     private val voice = TextToSpeech(app) { }
     private var spoken: String? = null
+    private val recorder = Recorder(app)
+    private val player = Player()
 
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
@@ -36,6 +40,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val _status = MutableStateFlow(if (link == null) Status.UNPAIRED else Status.CONNECTING)
     val status: StateFlow<Status> = _status
 
+    private val _voiceMode = MutableStateFlow(prefs.getBoolean("voiceMode", false))
+    /** Hold-to-talk or the keyboard; remembered, as WeChat does, so a parent who talks never has to switch again. */
+    val voiceMode: StateFlow<Boolean> = _voiceMode
+
+    private val _recording = MutableStateFlow(false)
+    val recording: StateFlow<Boolean> = _recording
+
     init {
         Log.i(TAG, "address=${Identity.load(app).address} agent=${pairing?.agent}")
         link?.open()
@@ -44,14 +55,46 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     fun send(text: String) {
         val prompt = text.trim()
         if (prompt.isEmpty() || link == null) return
-        append(Line(fromParent = true, text = prompt, at = System.currentTimeMillis(), delivery = Delivery.QUEUED))
+        queue(Line(fromParent = true, text = prompt, at = System.currentTimeMillis(), delivery = Delivery.QUEUED))
+    }
+
+    fun setVoiceMode(on: Boolean) {
+        _voiceMode.value = on
+        prefs.edit().putBoolean("voiceMode", on).apply()
+    }
+
+    fun startRecording() {
+        voice.stop()
+        player.stop()
+        recorder.start(System.currentTimeMillis(), onFull = { onMain(::stopRecording) })
+        _recording.value = true
+    }
+
+    /** Called on release, and by the recorder at the limit; whichever comes second finds nothing to stop. */
+    fun stopRecording() {
+        if (!_recording.value) return
+        _recording.value = false
+        val (file, seconds) = recorder.stop(System.currentTimeMillis())
+            ?: return Toast.makeText(getApplication(), "说话时间太短", Toast.LENGTH_SHORT).show()
+        queue(Line(fromParent = true, text = voicePrompt(seconds), at = System.currentTimeMillis(),
+            delivery = Delivery.QUEUED, voice = file.path, seconds = seconds))
+    }
+
+    fun playVoice(path: String) {
+        voice.stop()
+        player.toggle(path)
+    }
+
+    private fun queue(line: Line) {
+        append(line)
         if (_status.value == Status.ONLINE) sendQueued()
     }
 
     // Everything the parent wrote goes out in order, however long the link was down.
     private fun sendQueued() {
         for (line in _lines.value.queued()) {
-            if (!link!!.send(line.text)) return
+            val sound = line.voice?.let { File(it) }?.let { Voice(it.name, it.readBytes()) }
+            if (!link!!.send(line.text, sound)) return
             save(_lines.value.markSent(line))
         }
     }
@@ -62,6 +105,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     }
 
     private fun speak(text: String) {
+        player.stop()
         spoken = text
         voice.language = Locale.SIMPLIFIED_CHINESE
         voice.speak(text, TextToSpeech.QUEUE_FLUSH, null, text.hashCode().toString())
@@ -110,6 +154,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
 
     override fun onCleared() {
         voice.shutdown()
+        player.stop()
     }
 
     private fun onMain(block: () -> Unit) {

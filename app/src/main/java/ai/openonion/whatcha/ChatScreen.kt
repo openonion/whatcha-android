@@ -1,6 +1,11 @@
 package ai.openonion.whatcha
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +39,10 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -63,13 +72,33 @@ fun ChatScreen(vm: ChatViewModel) {
     val lines by vm.lines.collectAsState()
     val title by vm.title.collectAsState()
     val status by vm.status.collectAsState()
+    val voiceMode by vm.voiceMode.collectAsState()
+    val recording by vm.recording.collectAsState()
 
-    Column(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
-        Header(headerTitle(title, lines), status)
-        val hint = emptyHint(title, lines, status)
-        if (hint != null) EmptyHint(hint, Modifier.weight(1f))
-        else Conversation(lines, title, onReplay = vm::replay, modifier = Modifier.weight(1f))
-        if (status != Status.UNPAIRED) Composer(onSend = vm::send)
+    Box(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
+        Column(Modifier.fillMaxSize()) {
+            Header(headerTitle(title, lines), status)
+            val hint = emptyHint(title, lines, status)
+            if (hint != null) EmptyHint(hint, Modifier.weight(1f))
+            else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, modifier = Modifier.weight(1f))
+            if (status != Status.UNPAIRED) Composer(vm, voiceMode, recording)
+        }
+        if (recording) RecordingCard(Modifier.align(Alignment.Center))
+    }
+}
+
+// WeChat's dark square in the middle of the screen while a parent holds to talk.
+@Composable
+private fun RecordingCard(modifier: Modifier) {
+    Column(
+        modifier.size(200.dp).background(Color(0xCC000000), RoundedCornerShape(12.dp)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Image(painterResource(R.drawable.ic_voice), contentDescription = null, modifier = Modifier.size(72.dp),
+            colorFilter = ColorFilter.tint(Color.White))
+        Spacer(Modifier.height(16.dp))
+        Text("松开 发送", style = Body.copy(color = Color.White))
     }
 }
 
@@ -84,7 +113,7 @@ private fun Header(title: String, status: Status) {
 
 // A blank grey page gives a parent no reason to type; say what this is for until the first message.
 internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? =
-    if (lines.isEmpty() && status != Status.UNPAIRED) "想知道孩子在干嘛，\n就在下面打字问$name" else null
+    if (lines.isEmpty() && status != Status.UNPAIRED) "想知道孩子在干嘛，\n就在下面问$name，\n打字说话都行" else null
 
 @Composable
 private fun EmptyHint(hint: String, modifier: Modifier) {
@@ -106,7 +135,7 @@ private fun statusText(status: Status): String? = when (status) {
 }
 
 @Composable
-private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, modifier: Modifier) {
+private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, onPlay: (String) -> Unit, modifier: Modifier) {
     // Laid out from the bottom, as WeChat is: the end of the latest line stays in view when it is long,
     // when a new one arrives, and when the keyboard opens and the list gets shorter.
     LazyColumn(modifier.fillMaxWidth(), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -116,7 +145,13 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
             // which put the time label under its message.
             Column {
                 if (row.showTime) TimeLabel(row.line.at)
-                if (row.line.note) Note(row.line.text) else Bubble(row.line, agentName, onReplay)
+                when {
+                    row.line.note -> Note(row.line.text)
+                    row.line.voice != null -> Bubble(row.line, agentName, onTap = { onPlay(row.line.voice) }) { VoiceContent(row.line) }
+                    else -> Bubble(row.line, agentName, onTap = { onReplay(row.line.text) }.takeIf { !row.line.fromParent }) {
+                        Text(row.line.text, style = Body)
+                    }
+                }
             }
         }
         item { Spacer(Modifier.size(4.dp)) }
@@ -156,7 +191,7 @@ internal fun timeLabel(at: Long, now: Long): String {
 }
 
 @Composable
-private fun Bubble(line: Line, agentName: String, onReplay: (String) -> Unit) {
+private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, content: @Composable () -> Unit) {
     val mine = line.fromParent
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -164,18 +199,29 @@ private fun Bubble(line: Line, agentName: String, onReplay: (String) -> Unit) {
     ) {
         if (!mine) Avatar(R.drawable.avatar_agent, agentName)
         if (!mine) Tail(pointsLeft = true, color = Color.White)
-        // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read.
+        // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read;
+        // tapping a voice message plays it.
         Box(
             Modifier
                 .widthIn(max = 270.dp)
                 .background(if (mine) ParentBubble else Color.White, RoundedCornerShape(6.dp))
-                .clickable(enabled = !mine) { onReplay(line.text) }
+                .clickable(enabled = onTap != null) { onTap!!() }
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            Text(line.text, style = Body)
+            content()
         }
         if (mine) Tail(pointsLeft = false, color = ParentBubble)
         if (mine) Avatar(R.drawable.avatar_parent, "我")
+    }
+}
+
+// WeChat's voice bubble: its length in seconds, and a sound wave pointing at the speaker.
+@Composable
+private fun VoiceContent(line: Line) {
+    Row(Modifier.width(voiceBubbleWidth(line.seconds)), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        Text(voiceLabel(line.seconds), style = Body)
+        Spacer(Modifier.width(8.dp))
+        Image(painterResource(R.drawable.ic_wave), contentDescription = "语音", modifier = Modifier.size(28.dp).scale(scaleX = -1f, scaleY = 1f))
     }
 }
 
@@ -200,15 +246,53 @@ private fun Avatar(@DrawableRes picture: Int, who: String) {
     )
 }
 
-// WeChat's bottom bar: a white box, and a green 发送 that appears only once there is something to send.
+// WeChat's bottom bar: a switch between talking and typing, then either the hold-to-talk bar or a white box
+// with a green 发送 that appears only once there is something to send.
 @Composable
-private fun Composer(onSend: (String) -> Unit) {
-    var draft by remember { mutableStateOf("") }
+private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) {
+    val context = LocalContext.current
+    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) vm.setVoiceMode(true) }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
     Row(
         Modifier.fillMaxWidth().background(BarBackground).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Box(
+            Modifier.size(TargetSize).clickable {
+                val micAllowed = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                if (voiceMode || micAllowed) vm.setVoiceMode(!voiceMode) else askMic.launch(Manifest.permission.RECORD_AUDIO)
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painterResource(if (voiceMode) R.drawable.ic_keyboard else R.drawable.ic_voice),
+                contentDescription = if (voiceMode) "打字" else "按住说话",
+                modifier = Modifier.size(40.dp),
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        if (voiceMode) HoldToTalk(recording, onPress = vm::startRecording, onRelease = vm::stopRecording, modifier = Modifier.weight(1f))
+        else TypeBox(onSend = vm::send, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun HoldToTalk(recording: Boolean, onPress: () -> Unit, onRelease: () -> Unit, modifier: Modifier) {
+    Box(
+        modifier
+            .heightIn(min = TargetSize)
+            .background(if (recording) Color(0xFFC7C7C7) else Color.White, RoundedCornerShape(6.dp))
+            .pointerInput(Unit) { detectTapGestures(onPress = { onPress(); tryAwaitRelease(); onRelease() }) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(if (recording) "松开 发送" else "按住 说话", style = Body.copy(fontWeight = FontWeight.Medium))
+    }
+}
+
+@Composable
+private fun TypeBox(onSend: (String) -> Unit, modifier: Modifier) {
+    var draft by remember { mutableStateOf("") }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         BasicTextField(
             value = draft,
             onValueChange = { draft = it },

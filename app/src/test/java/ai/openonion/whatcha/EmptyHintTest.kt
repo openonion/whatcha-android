@@ -7,7 +7,7 @@ import org.junit.Test
 class EmptyHintTest {
     @Test
     fun anEmptyChatTellsTheParentWhatToDo() {
-        assertEquals("想知道孩子在干嘛，\n就在下面打字问小乐", emptyHint("小乐", emptyList(), Status.ONLINE))
+        assertEquals("想知道孩子在干嘛，\n就在下面问小乐，\n打字说话都行", emptyHint("小乐", emptyList(), Status.ONLINE))
     }
 
     @Test

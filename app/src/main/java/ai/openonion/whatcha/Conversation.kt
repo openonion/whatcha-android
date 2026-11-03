@@ -5,7 +5,10 @@ import kotlinx.serialization.Serializable
 /** Where a parent's message is on its way to the agent. The agent's own lines are always DONE. */
 enum class Delivery { QUEUED, SENT, DONE }
 
-/** A `note` is a grey line from the app itself, centred like WeChat's system messages; nobody said it. */
+/**
+ * A `note` is a grey line from the app itself, centred like WeChat's system messages; nobody said it.
+ * A `voice` line is a recording kept in the app's files: its path, and how many seconds it lasts.
+ */
 @Serializable
 data class Line(
     val fromParent: Boolean,
@@ -13,6 +16,8 @@ data class Line(
     val at: Long,
     val delivery: Delivery = Delivery.DONE,
     val note: Boolean = false,
+    val voice: String? = null,
+    val seconds: Int = 0,
 )
 
 // Plain words, no error code, and no promise the app cannot keep.

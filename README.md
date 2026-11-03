@@ -21,7 +21,8 @@ What works today:
 - **Invite onboarding.** The app presents the invite code packed with it, and the agent accepts the phone as a contact.
 - **A WeChat-style chat.** Green and white bubbles with tails, avatars on both sides, grey time lines, and a green 发送 that appears once there is text. The agent's name, set in its `host.yaml`, is the title. While the agent is writing, the title reads 对方正在输入..., as in WeChat.
 - **An icon parents can find.** A white chat bubble on WeChat green.
-- **An empty chat says what to do:** 「想知道孩子在干嘛，就在下面打字问小乐」.
+- **An empty chat says what to do:** 「想知道孩子在干嘛，就在下面问小乐，打字说话都行」.
+- **Hold to talk.** As in WeChat, the round button left of the box switches to 按住 说话. Letting go sends the recording as it is; the agent turns it into words when it arrives. A press under a second is dropped with 说话时间太短. Tapping a voice message plays it.
 - **No message is lost.** A message written while the link is down waits and goes out when the agent is back, including after the agent restarts. If the phone kills the app while a reply is on its way, the app picks the conversation up again on the next launch and the reply still arrives.
 - **Failures are said plainly.** If the agent fails, a grey line says so instead of leaving the parent waiting.
 - **The latest line stays in view**, at any font size and with the keyboard open.
@@ -67,7 +68,8 @@ adb install whatcha-family.apk
 | Milestone | What |
 |---|---|
 | 1 ✅ | Packed pairing, silent identity, invite onboarding, WeChat-style text chat, read aloud |
-| 2 | Hold-to-talk voice as the main input. Who transcribes it is not decided yet |
+| 2 ✅ | Hold-to-talk: the phone sends the recording, the agent transcribes it |
+| 2b | Photos from the parent's album or camera |
 | 3 | 小乐 sends good news on its own, without being asked |
 | 4 | The agent sets the avatar, text size and read-aloud the parent gets (the name already works) |
 | 5 | Remote care: the agent can take a screenshot, change settings, read logs and update the app |
@@ -81,7 +83,10 @@ The app is only the parents' end. What 小乐 says is decided by a skill on the 
 - tell only what really happened, and say "I'll ask" when it does not know;
 - leave money, health and relationships for the child to tell;
 - tell the child at once if the parents say something worrying;
-- describe only what the app can do (type, and tap a reply to hear it), never "just speak" or "I'll call you".
+- turn a voice message into words before answering it, and ask again if it holds no sound;
+- describe only what the app can do (type, hold to talk, tap a reply to hear it), never "I'll call you" or "here's a photo".
+
+For voice messages the agent needs a transcription tool: copy [`skills/xiaole/voice.py`](skills/xiaole/voice.py) next to your `agent.py` and pass `tools=[transcribe_voice]`. It needs `ffmpeg`. It checks for silence first, because given silence the transcription service makes up a sentence.
 
 The skill has a benchmark, [`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml). Copy it to your agent's `.co/benchmarks/` and run `co eval run xiaole --agent <your agent file>` before and after you change the skill.
 
