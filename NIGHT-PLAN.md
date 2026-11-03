@@ -8,7 +8,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 
 | # | Problem | Status |
 |---|---|---|
-| 1 | A message sent while the link is down is lost | open |
+| 1 | A message sent while the link is down is lost | **done** |
 | 2 | No sign that a message is sending or failed to send | open |
 | 3 | Nothing shows that 小乐 is replying | open |
 | 4 | No app icon: the home screen shows Android's default robot | open |
@@ -29,6 +29,16 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   answers ERROR "not authenticated", reconnect.
 - **Verify.** Unit test on the outbox; on the emulator, restart the host mid-conversation and see the
   message answered without the parent doing anything.
+- **Done 2026-11-03 22:00.** Messages now carry a delivery state (QUEUED → SENT → DONE) and are saved
+  with it; QUEUED ones go out on every CONNECTED; the host's "authenticate first" ERROR sends CONNECT
+  again and puts SENT messages back in the queue. Tests `OutboxTest` (4) and `AgentLinkTest` (2) failed
+  to compile before the change, pass after. Emulator, real relay: (a) restarted the host between two
+  messages — the app reconnected by itself and the second message was answered (host log
+  `CONNECT … status=connected`, then `INPUT … prompt=after restart`); (b) stopped the host, sent
+  「sent while down」, started the host — host log `INPUT … prompt=sent while down` 8 s after the app's
+  `connected`, reply shown (`screenshots/night-01-sent-while-down.png`).
+- **Seen on the way.** While the host is down the relay answers each reconnect with an ERROR whose
+  message is empty, every 5 s. #5 must not turn those into lines in the chat.
 
 ## 2. No sign that a message is sending or failed
 

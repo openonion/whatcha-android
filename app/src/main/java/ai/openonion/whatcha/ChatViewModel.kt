@@ -8,15 +8,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.Locale
-
-@Serializable
-data class Line(val fromParent: Boolean, val text: String, val at: Long)
 
 enum class Status { UNPAIRED, CONNECTING, ONLINE, OFFLINE }
 
@@ -45,8 +40,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     fun send(text: String) {
         val prompt = text.trim()
         if (prompt.isEmpty() || link == null) return
-        append(Line(fromParent = true, text = prompt, at = System.currentTimeMillis()))
-        if (!link.send(prompt)) _status.value = Status.OFFLINE
+        append(Line(fromParent = true, text = prompt, at = System.currentTimeMillis(), delivery = Delivery.QUEUED))
+        if (_status.value == Status.ONLINE) sendQueued()
+    }
+
+    // Everything the parent wrote goes out in order, however long the link was down.
+    private fun sendQueued() {
+        for (line in _lines.value.queued()) {
+            if (!link!!.send(line.text)) return
+            save(_lines.value.markSent(line))
+        }
     }
 
     fun speak(text: String) {
@@ -54,9 +57,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         voice.speak(text, TextToSpeech.QUEUE_FLUSH, null, text.hashCode().toString())
     }
 
-    override fun onConnected() {
+    // OkHttp calls back on its own thread; the conversation is only ever changed on the main thread.
+    override fun onConnected() = onMain {
         Log.i(TAG, "connected")
         _status.value = Status.ONLINE
+        sendQueued()
+    }
+
+    override fun onRejected() = onMain {
+        Log.w(TAG, "host forgot this phone; reconnecting")
+        save(_lines.value.requeueSent())
     }
 
     override fun onProfile(name: String) {
@@ -64,8 +74,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         prefs.edit().putString("title", name).apply()
     }
 
-    override fun onReply(text: String) {
+    override fun onReply(text: String) = onMain {
         Log.i(TAG, "reply ${text.length} chars")
+        save(_lines.value.answerOldest())
         append(Line(fromParent = false, text = text, at = System.currentTimeMillis()))
         speak(text)
     }
@@ -88,9 +99,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         voice.shutdown()
     }
 
-    private fun append(line: Line) {
-        _lines.update { it + line }
-        prefs.edit().putString("lines", Json.encodeToString(_lines.value)).apply()
+    private fun onMain(block: () -> Unit) {
+        viewModelScope.launch { block() }
+    }
+
+    private fun append(line: Line) = save(_lines.value + line)
+
+    private fun save(lines: List<Line>) {
+        _lines.value = lines
+        prefs.edit().putString("lines", Json.encodeToString(lines)).apply()
     }
 
     private fun loadLines(): List<Line> =

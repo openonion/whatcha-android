@@ -23,6 +23,8 @@ class AgentLink(
         fun onProfile(name: String)
         fun onReply(text: String)
         fun onError(message: String)
+        /** The host no longer knows this phone (it restarted); CONNECT has been sent again. */
+        fun onRejected()
         fun onDisconnected(reason: String)
     }
 
@@ -53,8 +55,14 @@ class AgentLink(
             "AGENT_PROFILE" -> frame.string("name")?.let(listener::onProfile)
             "PING" -> webSocket.send(wire.pong())
             "OUTPUT" -> listener.onReply(frame.string("result").orEmpty())
-            "ERROR" -> listener.onError(frame.string("message").orEmpty())
+            "ERROR" -> onError(webSocket, frame.string("message").orEmpty())
         }
+    }
+
+    private fun onError(webSocket: WebSocket, message: String) {
+        if (!message.startsWith(HOST_FORGOT_US)) return listener.onError(message)
+        webSocket.send(wire.connect(sessionId))
+        listener.onRejected()
     }
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -67,5 +75,8 @@ class AgentLink(
         listener.onDisconnected("closed $code $reason")
     }
 }
+
+// What a Host answers to INPUT on a connection that has not sent CONNECT, e.g. after the Host restarted.
+private const val HOST_FORGOT_US = "authenticate first"
 
 private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.content
