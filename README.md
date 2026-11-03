@@ -2,13 +2,13 @@
 
 [中文](README.zh-CN.md)
 
-**Whatcha is a one-screen Android app for parents. They use it to chat with their child's AI agent.**
+**Whatcha is a one-screen Android app for parents. They use it to ask their child's AI agent what the child is up to.**
 
-The agent runs on the child's machine and knows what the child has been up to. When a parent asks "what are you doing?", the agent answers in the child's voice. The child can step into the same chat at any time.
+Parents worry, and their child is often too busy to answer. The child's agent knows what the child has been doing. In Whatcha it is called 小乐 (Xiaole). 小乐 says plainly that it is an AI, never pretends to be the child, and only tells the parents things that really happened.
 
-The parent configures nothing and never sees an account, an address or a setting. All setup is done on the agent's side.
+The app looks and works like a WeChat chat, because WeChat is the one app many parents already know. The parent configures nothing and never sees an account, an address or a setting. All setup is done on the agent's side.
 
-<img src="screenshots/m1-chat.png" alt="The chat screen: a parent's message on the right, the agent's reply on the left, large text and a large send button" width="300">
+<img src="screenshots/night-01-sent-while-down.png" alt="A WeChat-style chat: the parent's green bubble on the right, 小乐's white bubbles on the left with a green avatar, large text" width="300">
 
 ## Status
 
@@ -19,7 +19,8 @@ What works today:
 - **Pairing is packed into the APK.** The parent installs one file, opens it, and the app is already connected. Nothing is typed or pasted.
 - **Silent identity.** The phone makes its own Ed25519 key on first launch.
 - **Invite onboarding.** The app presents the invite code packed with it, and the agent accepts the phone as a contact.
-- **Text chat.** Commands are signed, and the agent's name appears as the title.
+- **A WeChat-style chat.** Green and white bubbles with tails, avatars on both sides, grey time lines, and a green 发送 that appears once there is text. The agent's name, set in its `host.yaml`, is the title.
+- **No message is lost.** A message written while the link is down waits and goes out when the agent is back, including after the agent restarts.
 - **Replies are read aloud.** Tapping a reply reads it again.
 - **History is kept** on the phone.
 
@@ -61,14 +62,25 @@ adb install whatcha-family.apk
 
 | Milestone | What |
 |---|---|
-| 1 ✅ | Packed pairing, silent identity, invite onboarding, text chat, read aloud |
+| 1 ✅ | Packed pairing, silent identity, invite onboarding, WeChat-style text chat, read aloud |
 | 2 | Hold-to-talk voice as the main input. The agent transcribes |
-| 3 | A daily card from the agent: where the child is, what they are doing, the weather |
-| 4 | The agent sets the titles, names and avatars the parent sees |
+| 3 | 小乐 sends good news on its own, without being asked |
+| 4 | The agent sets the avatar, text size and read-aloud the parent gets (the name already works) |
 | 5 | Remote care: the agent can take a screenshot, change settings, read logs and update the app |
 | 6 | Staying connected in the background on Huawei and other phones without Google services |
 
+## 小乐, the agent's side
+
+The app is only the parents' end. What 小乐 says is decided by a skill on the child's agent: [`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md). Copy it into your agent's `.co/skills/xiaole/`. It tells the agent to:
+
+- say it is an AI, and never speak as the child;
+- tell only what really happened, and say "I'll ask" when it does not know;
+- leave money, health and relationships for the child to tell;
+- tell the child at once if the parents say something worrying.
+
 ## Design rules
+
+- **Like WeChat.** Anything the parent already does in WeChat works the same way here, in the same place and colour. What WeChat has and this app does not need is left out.
 
 - **One screen.** There are no menus, contacts or settings for the parent.
 - **Large by default.** Body text is 24sp and main targets are at least 60dp. This follows the main-text and target-size minimums of China's 2021 elderly-app spec from MIIT.
