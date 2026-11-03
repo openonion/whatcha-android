@@ -109,10 +109,8 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   are in sp, so they scale, but nothing has been looked at at 1.3× or 2×.
 - **Fix.** Whatever the screenshots show.
 - **Verify.** Screenshots at font scale 1.3 and 2.0.
-
-## 7. Large system font (checked)
-
-- **Checked 2026-11-04 05:12.** Emulator at font scale 1.3 and 2.0 (Android's largest) with a real reply:
+- **Checked 2026-11-04 05:12.** Emulator at font scale 2.0, Android's largest, with a real reply (the 1.3
+  capture was taken before the screen redrew, so it shows 1.0 and counts for nothing):
   text wraps, bubbles grow, the 发送 button still fits beside the box. Nothing to fix; the one problem seen
   was #9. The emulator's own font setting was put back afterwards.
 
