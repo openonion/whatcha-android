@@ -17,7 +17,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 7 | Large system font never tried | **checked: holds** |
 | 8 | A reply that arrives after the app was killed is lost | **done** |
 | 9 | Opening the keyboard hides the latest message | **done** |
-| 10 | Read-aloud cannot be stopped | open |
+| 10 | Read-aloud cannot be stopped | done 07:20 |
 | R1 | README said the agent answers in the child's voice | **done** |
 | S1 | 小乐 tells parents to speak to the phone; the app has no voice input | **done** |
 | R2 | READMEs describe the app as it was at 21:00 | **done** |
@@ -173,6 +173,12 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Evidence.** *Read*: every reply is spoken; tapping a bubble starts it again; nothing stops it.
 - **Fix.** Tapping the bubble that is speaking stops it.
 - **Verify.** Unit test on the toggle.
+- **Done 2026-11-04 07:20.** `ReadAloudTest` (3) failed first (`tapStops` did not exist), then passed.
+  The view model remembers the reply it last read; a tap on that reply while `TextToSpeech.isSpeaking`
+  stops it, any other tap reads. Emulator against the real relay, speech state read from
+  `dumpsys audio` (the `CONTENT_TYPE_SPEECH` track) after each tap on 小乐's reply, starting quiet:
+  tap 1 `started`, tap 2 gone, 3 s later still gone, tap 3 `started`, tap 4 gone. Left alone, the same
+  reply plays for about 20 s. Nothing on screen changes, so there is no screenshot; that is the evidence.
 
 ## R1. README said the agent answers in the child's voice
 

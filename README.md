@@ -25,7 +25,7 @@ What works today:
 - **No message is lost.** A message written while the link is down waits and goes out when the agent is back, including after the agent restarts. If the phone kills the app while a reply is on its way, the app picks the conversation up again on the next launch and the reply still arrives.
 - **Failures are said plainly.** If the agent fails, a grey line says so instead of leaving the parent waiting.
 - **The latest line stays in view**, at any font size and with the keyboard open.
-- **Replies are read aloud.** Tapping a reply reads it again.
+- **Replies are read aloud.** Tapping a reply reads it again; tapping it while it is being read stops it.
 - **History is kept** on the phone.
 
 ## How it works

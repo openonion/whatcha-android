@@ -68,7 +68,7 @@ fun ChatScreen(vm: ChatViewModel) {
         Header(headerTitle(title, lines), status)
         val hint = emptyHint(title, lines, status)
         if (hint != null) EmptyHint(hint, Modifier.weight(1f))
-        else Conversation(lines, title, onReplay = vm::speak, modifier = Modifier.weight(1f))
+        else Conversation(lines, title, onReplay = vm::replay, modifier = Modifier.weight(1f))
         if (status != Status.UNPAIRED) Composer(onSend = vm::send)
     }
 }
@@ -164,7 +164,7 @@ private fun Bubble(line: Line, agentName: String, onReplay: (String) -> Unit) {
     ) {
         if (!mine) Avatar(R.drawable.avatar_agent, agentName)
         if (!mine) Tail(pointsLeft = true, color = Color.White)
-        // Tapping one of the agent's bubbles reads it aloud again.
+        // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read.
         Box(
             Modifier
                 .widthIn(max = 270.dp)

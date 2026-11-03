@@ -15,6 +15,9 @@ import java.util.Locale
 
 enum class Status { UNPAIRED, CONNECTING, ONLINE, OFFLINE }
 
+// Like a second tap on a WeChat voice message: tapping the reply being read stops it.
+internal fun tapStops(speaking: String?, tapped: String): Boolean = speaking == tapped
+
 /** The one conversation on this phone. Keeps it on disk, reads replies aloud, reconnects on its own. */
 class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listener {
 
@@ -22,6 +25,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val pairing = loadPairing(app)
     private val link = pairing?.let { AgentLink(it, Wire(Identity.load(app), it.agent), this, prefs.getString("session", null)) }
     private val voice = TextToSpeech(app) { }
+    private var spoken: String? = null
 
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
@@ -52,7 +56,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         }
     }
 
-    fun speak(text: String) {
+    // A tap on 小乐's bubble reads it again, or stops it if that is the one being read.
+    fun replay(text: String) {
+        if (tapStops(if (voice.isSpeaking) spoken else null, text)) voice.stop() else speak(text)
+    }
+
+    private fun speak(text: String) {
+        spoken = text
         voice.language = Locale.SIMPLIFIED_CHINESE
         voice.speak(text, TextToSpeech.QUEUE_FLUSH, null, text.hashCode().toString())
     }
