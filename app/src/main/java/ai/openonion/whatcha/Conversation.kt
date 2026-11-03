@@ -41,3 +41,9 @@ fun List<Line>.failOldest(message: String, at: Long): List<Line> {
     if (message.isEmpty() || none { it.delivery == Delivery.SENT }) return this
     return answerOldest() + Line(fromParent = false, text = AGENT_FAILED, at = at, note = true)
 }
+
+/**
+ * After a reconnect the host only streams a reply for a run still in progress. If the agent is idle, a
+ * message still waiting lost its reply (the app was killed, or the link dropped as the run ended), so ask again.
+ */
+fun List<Line>.afterReconnect(agentRunning: Boolean): List<Line> = if (agentRunning) this else requeueSent()

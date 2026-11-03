@@ -24,7 +24,7 @@ class AgentLinkTest {
 
     private class Heard : AgentLink.Listener {
         val events = mutableListOf<String>()
-        override fun onConnected() { events += "connected" }
+        override fun onConnected(sessionId: String, running: Boolean) { events += "connected $sessionId running=$running" }
         override fun onProfile(name: String) {}
         override fun onReply(text: String) {}
         override fun onError(message: String) { events += "error" }
@@ -34,7 +34,22 @@ class AgentLinkTest {
 
     private val me = Identity(Ed25519PrivateKeyParameters(ByteArray(32) { it.toByte() }, 0))
     private val heard = Heard()
-    private val link = AgentLink(Pairing(agent = "0xagent"), Wire(me, "0xagent", now = { 1L }), heard)
+    private val link = AgentLink(Pairing(agent = "0xagent"), Wire(me, "0xagent", now = { 1L }), heard, sessionId = "saved")
+
+    @Test
+    fun aRelaunchedAppResumesTheSessionItSavedSoTheHostCanFinishTheReply() {
+        val socket = Sent()
+        link.onOpen(socket, okhttp3.Response.Builder().request(socket.request()).protocol(okhttp3.Protocol.HTTP_1_1).code(101).message("").build())
+        val connect = Json.parseToJsonElement(socket.frames.single()).jsonObject
+        assertEquals("saved", connect["session_id"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun connectedSaysWhichSessionAndWhetherTheAgentIsStillWorking() {
+        link.onMessage(Sent(), """{"type":"CONNECTED","session_id":"s1","status":"running"}""")
+        link.onMessage(Sent(), """{"type":"CONNECTED","session_id":"s1","status":"connected"}""")
+        assertEquals(listOf("connected s1 running=true", "connected s1 running=false"), heard.events)
+    }
 
     @Test
     fun aHostThatForgotUsGetsCONNECTAgainAndTheRejectedMessageIsReported() {

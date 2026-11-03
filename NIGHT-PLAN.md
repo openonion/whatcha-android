@@ -15,10 +15,11 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 5 | An agent error is swallowed: the parent waits forever | **done** |
 | 6 | First screen is empty: nothing says what to do | **done** |
 | 7 | Large system font never tried | open |
-| 8 | A reply that arrives after the app was killed is lost | open |
+| 8 | A reply that arrives after the app was killed is lost | **done** |
 | 9 | Opening the keyboard hides the latest message | open |
 | 10 | Read-aloud cannot be stopped | open |
 | R1 | README said the agent answers in the child's voice | **done** |
+| S1 | 小乐 tells parents to speak to the phone; the app has no voice input | open |
 
 ## 1. A message sent while the link is down is lost
 
@@ -116,12 +117,31 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 - **Fix.** Keep the session id on disk and resume it on CONNECT.
 - **Verify.** Unit test that CONNECT carries the saved id; on the emulator, send, kill the app at once,
   reopen, and see the reply.
+- **Done 2026-11-04 03:14.** Worse than the evidence said: since the outbox (#1) a waiting message is saved
+  as SENT, so after a kill nothing ever finished it — 「对方正在输入...」 for good, and the next reply would
+  be pinned to the wrong question. The same happened after a plain link drop if the run ended meanwhile.
+  Read in connectonion `ws_router/connect.py`: CONNECT with a known session id answers `status: running`
+  and streams the rest of the run, or `connected`/`new` with no reply to come. So the session id is now
+  kept on disk and sent in CONNECT; on `running` the app keeps waiting, otherwise it queues waiting
+  messages to be asked again. `AgentLinkTest` (+2) and `OutboxTest` (+2) failed to compile before, pass
+  after. Emulator, real relay, `am force-stop` 1 s after sending: (a) reopened at once — app log
+  `connected session=50bf3903… running=true`, host `↻ resuming forwarding to running agent`, reply 1 s
+  later; (b) reopened after 35 s — `running=false`, host `INPUT` again, reply 8 s later
+  (`screenshots/night-08-killed.png`, left and right). Cost of (b): the agent runs that question twice.
 
 ## 9. Opening the keyboard hides the latest message
 
 - **Evidence.** *Read*: the list scrolls only when a line is added. WeChat jumps to the bottom when the keyboard opens.
 - **Fix.** Scroll to the last line when the input gets focus.
 - **Verify.** Screenshot with the keyboard open on a long chat.
+
+## S1. 小乐 promises voice input the app does not have
+
+- **Evidence.** *Seen* 2026-11-04 03:14: 小乐 answered a garbled message with 「要是想问孩子的事，直接对着手机说话
+  或者发消息问我就行」. The app has a text box only; a parent who talks to the phone gets nothing.
+- **Fix.** The skill says what the app can do: type, and tap a reply to hear it again. Nothing about speaking
+  until hold-to-talk exists (see Ask Aaron).
+- **Verify.** Ask the test agent the same garbled message; the answer must not mention speaking.
 
 ## 10. Read-aloud cannot be stopped
 

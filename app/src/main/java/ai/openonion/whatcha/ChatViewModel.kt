@@ -20,7 +20,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
 
     private val prefs = app.getSharedPreferences("chat", 0)
     private val pairing = loadPairing(app)
-    private val link = pairing?.let { AgentLink(it, Wire(Identity.load(app), it.agent), this) }
+    private val link = pairing?.let { AgentLink(it, Wire(Identity.load(app), it.agent), this, prefs.getString("session", null)) }
     private val voice = TextToSpeech(app) { }
 
     private val _lines = MutableStateFlow(loadLines())
@@ -58,8 +58,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     }
 
     // OkHttp calls back on its own thread; the conversation is only ever changed on the main thread.
-    override fun onConnected() = onMain {
-        Log.i(TAG, "connected")
+    override fun onConnected(sessionId: String, running: Boolean) = onMain {
+        Log.i(TAG, "connected session=$sessionId running=$running")
+        prefs.edit().putString("session", sessionId).apply()
+        save(_lines.value.afterReconnect(running))
         _status.value = Status.ONLINE
         sendQueued()
     }

@@ -16,10 +16,13 @@ class AgentLink(
     private val pairing: Pairing,
     private val wire: Wire,
     private val listener: Listener,
+    // Saved by the caller, so a relaunched app picks up the session its unanswered message went into.
+    private var sessionId: String? = null,
 ) : WebSocketListener() {
 
     interface Listener {
-        fun onConnected()
+        /** [running]: the agent is still working on this session, so its reply is still coming. */
+        fun onConnected(sessionId: String, running: Boolean)
         fun onProfile(name: String)
         fun onReply(text: String)
         fun onError(message: String)
@@ -30,7 +33,6 @@ class AgentLink(
 
     private val client = OkHttpClient.Builder().pingInterval(30, TimeUnit.SECONDS).build()
     private var socket: WebSocket? = null
-    private var sessionId: String? = null
 
     fun open() {
         socket = client.newWebSocket(Request.Builder().url("${pairing.relay}/ws/input").build(), this)
@@ -48,7 +50,7 @@ class AgentLink(
         when (frame.string("type")) {
             "CONNECTED" -> {
                 sessionId = frame.string("session_id") ?: sessionId
-                listener.onConnected()
+                listener.onConnected(sessionId!!, frame.string("status") == "running")
             }
             // The agent has not met this phone yet: present the invite code packed into the APK.
             "ONBOARD_REQUIRED" -> webSocket.send(wire.onboard(pairing.invite!!))

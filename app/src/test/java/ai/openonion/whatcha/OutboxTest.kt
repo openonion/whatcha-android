@@ -29,4 +29,16 @@ class OutboxTest {
         val old = """[{"fromParent":true,"text":"hi","at":1}]"""
         assertEquals(Delivery.DONE, kotlinx.serialization.json.Json.decodeFromString<List<Line>>(old).single().delivery)
     }
+
+    @Test
+    fun aReconnectToAStillRunningAgentKeepsWaitingForItsReply() {
+        val lines = listOf(asked("a", Delivery.SENT))
+        assertEquals(lines, lines.afterReconnect(agentRunning = true))
+    }
+
+    @Test
+    fun aReconnectToAnIdleAgentAsksAgainBecauseThatReplyWillNeverCome() {
+        val lines = listOf(asked("a", Delivery.SENT))
+        assertEquals(listOf(Delivery.QUEUED), lines.afterReconnect(agentRunning = false).map { it.delivery })
+    }
 }
