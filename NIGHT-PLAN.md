@@ -11,7 +11,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 1 | A message sent while the link is down is lost | **done** |
 | 2 | No sign that a message is sending or failed to send | open |
 | 3 | Nothing shows that 小乐 is replying | **done** |
-| 4 | No app icon: the home screen shows Android's default robot | open |
+| 4 | No app icon: the home screen shows Android's default robot | **done** |
 | 5 | An agent error is swallowed: the parent waits forever | **done** |
 | 6 | First screen is empty: nothing says what to do | open |
 | 7 | Large system font never tried | open |
@@ -65,6 +65,12 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   robot, and parents find apps by their picture.
 - **Fix.** An adaptive icon: WeChat-green square, white speech bubble, the label 在干嘛.
 - **Verify.** Screenshot of the launcher.
+- **Done 2026-11-04 01:15.** Chosen over #6 because the icon is how a parent finds the app every time they
+  open it; the empty screen is seen once. An adaptive icon drawn as a vector, so it is sharp at every size
+  and survives any launcher's mask (EMUI's included): WeChat green `#07C160`, one white speech bubble with
+  three dots. It reads as "chat" without copying WeChat's own two-bubble logo. The label stays 在干嘛.
+  `IconTest` (2) failed before (no `android:icon`, no `mipmap-anydpi/ic_launcher.xml`), passes after.
+  Emulator app drawer: `screenshots/night-04-icon.png`.
 
 ## 5. Agent errors are swallowed
 
@@ -72,7 +78,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   parent waiting forever.
 - **Fix.** Show a plain grey line in the chat: 「小乐这会儿出了点问题，已经告诉孩子了」. Never an error code.
 - **Verify.** Unit test that an ERROR frame (other than the reconnect case) becomes that line.
-- **Done 2026-11-04 00:20.** Chosen first this round because round 3's typing indicator made it worse: a
+- **Done 2026-11-04 00:17.** Chosen first this round because round 3's typing indicator made it worse: a
   failed run left 「对方正在输入...」 in the title for good. Now an ERROR ends the wait for the oldest message
   and adds a grey centred note, like WeChat's system lines: 「小乐这会儿出了点问题，没能回答。过一会儿再问问看。」
   The planned wording 「已经告诉孩子了」 was dropped: nothing tells the child yet, and the app must not
