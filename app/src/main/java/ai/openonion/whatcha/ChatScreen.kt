@@ -103,10 +103,15 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
         itemsIndexed(lines) { i, line ->
             // Like WeChat: a grey time line when five minutes have passed since the last message.
             if (i == 0 || line.at - lines[i - 1].at > TimeGapMillis) TimeLabel(line.at)
-            Bubble(line, agentName, onReplay)
+            if (line.note) Note(line.text) else Bubble(line, agentName, onReplay)
         }
         item { Spacer(Modifier.size(4.dp)) }
     }
+}
+
+@Composable
+private fun Note(text: String) {
+    Text(text, style = Small, modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp), textAlign = TextAlign.Center)
 }
 
 @Composable

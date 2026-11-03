@@ -81,8 +81,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         speak(text)
     }
 
-    override fun onError(message: String) {
+    override fun onError(message: String) = onMain {
         Log.w(TAG, "agent error: $message")
+        save(_lines.value.failOldest(message, System.currentTimeMillis()))
     }
 
     override fun onDisconnected(reason: String) {

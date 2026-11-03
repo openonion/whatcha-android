@@ -12,7 +12,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | 2 | No sign that a message is sending or failed to send | open |
 | 3 | Nothing shows that 小乐 is replying | **done** |
 | 4 | No app icon: the home screen shows Android's default robot | open |
-| 5 | An agent error is swallowed: the parent waits forever | open |
+| 5 | An agent error is swallowed: the parent waits forever | **done** |
 | 6 | First screen is empty: nothing says what to do | open |
 | 7 | Large system font never tried | open |
 | 8 | A reply that arrives after the app was killed is lost | open |
@@ -72,6 +72,15 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   parent waiting forever.
 - **Fix.** Show a plain grey line in the chat: 「小乐这会儿出了点问题，已经告诉孩子了」. Never an error code.
 - **Verify.** Unit test that an ERROR frame (other than the reconnect case) becomes that line.
+- **Done 2026-11-04 00:20.** Chosen first this round because round 3's typing indicator made it worse: a
+  failed run left 「对方正在输入...」 in the title for good. Now an ERROR ends the wait for the oldest message
+  and adds a grey centred note, like WeChat's system lines: 「小乐这会儿出了点问题，没能回答。过一会儿再问问看。」
+  The planned wording 「已经告诉孩子了」 was dropped: nothing tells the child yet, and the app must not
+  promise what it does not do. The relay's empty ERRORs and errors with nothing waiting change nothing.
+  `AgentErrorTest` (3) failed to compile before, passes after. Emulator, real relay, test agent pointed at
+  a model that does not exist (host log `UnprocessableEntityError: Error code: 422`, app log
+  `agent error: Unable to run agent`): the note appears and the title returns to 小乐; after restarting
+  the agent on its normal model the next message is answered (`screenshots/night-05-agent-error.png`).
 
 ## 6. Empty first screen
 
