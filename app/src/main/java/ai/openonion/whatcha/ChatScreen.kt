@@ -1,5 +1,7 @@
 package ai.openonion.whatcha
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +35,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -129,7 +133,7 @@ private fun Bubble(line: Line, agentName: String, onReplay: (String) -> Unit) {
         Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
     ) {
-        if (!mine) Avatar(agentName.take(1), Green)
+        if (!mine) Avatar(R.drawable.avatar_agent, agentName)
         if (!mine) Tail(pointsLeft = true, color = Color.White)
         // Tapping one of the agent's bubbles reads it aloud again.
         Box(
@@ -142,7 +146,7 @@ private fun Bubble(line: Line, agentName: String, onReplay: (String) -> Unit) {
             Text(line.text, style = Body)
         }
         if (mine) Tail(pointsLeft = false, color = ParentBubble)
-        if (mine) Avatar("我", Color(0xFFB2B2B2))
+        if (mine) Avatar(R.drawable.avatar_parent, "我")
     }
 }
 
@@ -157,11 +161,14 @@ private fun Tail(pointsLeft: Boolean, color: Color) {
     Box(Modifier.padding(start = if (pointsLeft) 4.dp else 0.dp, end = if (pointsLeft) 0.dp else 4.dp, top = 22.dp).size(width = 8.dp, height = 16.dp).background(color, shape))
 }
 
+// Default pictures until the agent sends its own (roadmap 4). Candidates are in design/avatars/.
 @Composable
-private fun Avatar(text: String, color: Color) {
-    Box(Modifier.size(TargetSize).background(color, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-        Text(text, style = Body.copy(color = Color.White, fontWeight = FontWeight.Bold))
-    }
+private fun Avatar(@DrawableRes picture: Int, who: String) {
+    Image(
+        painterResource(picture),
+        contentDescription = who,
+        modifier = Modifier.size(TargetSize).clip(RoundedCornerShape(6.dp)),
+    )
 }
 
 // WeChat's bottom bar: a white box, and a green 发送 that appears only once there is something to send.

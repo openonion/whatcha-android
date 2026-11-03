@@ -8,7 +8,7 @@ Parents worry, and their child is often too busy to answer. The child's agent kn
 
 The app looks and works like a WeChat chat, because WeChat is the one app many parents already know. The parent configures nothing and never sees an account, an address or a setting. All setup is done on the agent's side.
 
-<img src="screenshots/night-01-sent-while-down.png" alt="A WeChat-style chat: the parent's green bubble on the right, 小乐's white bubbles on the left with a green avatar, large text" width="300">
+<img src="screenshots/chat.png" alt="A WeChat-style chat: the parent's green bubble on the right with a teacup avatar, 小乐's white bubble on the left with a smiling robot avatar, large text" width="300">
 
 ## Status
 

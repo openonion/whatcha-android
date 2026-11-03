@@ -111,7 +111,16 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   a made-up reply). Repo topics added. Draft PR #2 opened so CI runs on this branch: run 41626130558 green,
   including "A packed APK still verifies". Rendered README checked through the GitHub API: the image resolves.
 
+## A1. Picture avatars instead of a letter (Aaron, 22:15)
+
+- **Done 2026-11-03 22:30.** Six candidates generated with the Codex CLI's image tool (`design/avatars/`,
+  contact sheet `candidates.jpg`): for 小乐 a sun, a green bird, a lantern, a robot; for the parent a
+  teacup and a plant. No human faces, so nothing looks like the child. Defaults: the robot for 小乐 (it
+  says "AI" at a glance) and the teacup for the parent. Emulator screenshot `screenshots/chat.png`.
+
 ## Ask Aaron in the morning
+
+- Default avatars: robot for 小乐 and teacup for the parent, or another pair from `design/avatars/candidates.jpg`?
 
 - Hold-to-talk is the biggest gap and is not on this list, because it needs a decision: record on the
   phone and have the agent transcribe (`co asr`), or not. Huawei phones have no Google speech service.
