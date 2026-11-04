@@ -88,7 +88,9 @@ app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill
 
 语音消息需要 agent 有一个转写工具：把 [`skills/xiaole/voice.py`](skills/xiaole/voice.py) 复制到 `agent.py` 旁边，传 `tools=[transcribe_voice]`，机器上要有 `ffmpeg`。它会先查有没有声音，因为对着一段静音，转写服务会编出一句话来。
 
-这个 skill 带一套测试：[`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml)。复制到你 agent 的 `.co/benchmarks/`，改 skill 前后各跑一次 `co eval run xiaole --agent <你的 agent 文件>`。
+回答「在干嘛」需要 agent 能读子女的笔记本：把 [`skills/xiaole/rem.py`](skills/xiaole/rem.py) 复制到 `agent.py` 旁边，传它的三个工具 `recent_sessions`、`show_page`、`search_notebook`。它们读 `co rem` 的笔记本（`~/.co/rem`，或 `REM_ROOT`），把页面原样交给 agent；skill 只从中取工作的部分，钱、身体、感情不说。
+
+这个 skill 带一套测试：[`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml)，配一个虚构的笔记本 [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/)，里面把修好的 bug 和逾期发票、没睡够、吵架放在一起，专门测这些坑。把 yaml 复制到你 agent 的 `.co/benchmarks/`，改 skill 前后各跑一次 `co eval run xiaole --agent skills/xiaole/benchmark/agent.py`；`python skills/xiaole/benchmark/empty_check.py` 查空笔记本时的回答。
 
 ## 设计规矩
 
