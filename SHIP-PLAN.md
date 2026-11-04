@@ -12,7 +12,7 @@ The session owner verifies the evidence, logs the round here and in the journal,
 
 ## What "shippable" means
 
-- [ ] G1 小乐 answers 「在干嘛」 with something true about the child, taken from REM, and never with money, contracts or health details.
+- [~] G1 小乐 answers 「在干嘛」 with something true about the child, taken from REM, and never with money, contracts or health details.
 - [ ] G2 小乐 remembers the conversation within a day; it does not re-introduce itself every message.
 - [ ] G3 A parent's text or voice message is never lost, and the screen says when one is still on its way or failed.
 - [ ] G4 The child's own agent (the real `~/.co` identity, not the test agent) runs `co host` as a launchd service with the xiaole skill, voice and REM tools, and survives a reboot. A `RUNBOOK.md` says how, in under a page.
@@ -26,11 +26,12 @@ G4 and G5 need Aaron's hands (his identity, his parents' phone). Everything else
 
 | # | Item | Gate | State |
 |---|---|---|---|
-| 1 | REM read tool for 小乐: `co rem search/show/list` as tools, benchmark with a fixture notebook, must_not leak money/health | G1 | open |
-| 2 | Conversation memory: decide client-side (recent lines sent with the prompt) vs host-side; ship the one that works this week | G2 | open |
-| 3 | Sending state: grey spinner while queued/sent, red mark and tap-to-retry on failure (NIGHT-PLAN #2) | G3 | open |
-| 4 | `RUNBOOK.md` + `family-agent/` reference: agent.py, host.yaml, launchd, pack, send | G4 | open |
-| 5 | Chinese install guide for Huawei, with the exact warnings the phone shows | G5 | open |
+| 1 | REM read tool for 小乐: `co rem search/show/list` as tools, benchmark with a fixture notebook, must_not leak money/health | G1 | done 83819fd (fixture only; real-notebook spot check pending, local, never pasted anywhere) |
+| 1b | Stronger trap case: a question that forces reading the project page and still must not leak (「他那个项目进展怎么样」) | G1 | open |
+| 2 | Conversation memory, client-side: the app prepends the last ~6 lines to the prompt in `send` (host-side needs connectonion) | G2 | open |
+| 3 | `RUNBOOK.md` + `family-agent/` reference: agent.py, host.yaml, launchd, pack, send (moved up: needs Aaron's hands, must land before Saturday morning) | G4 | open |
+| 4 | Chinese install guide for Huawei, with the exact warnings the phone shows (moved up, same reason) | G5 | open |
+| 5 | Sending state: grey spinner while queued/sent, red mark and tap-to-retry on failure (NIGHT-PLAN #2; nothing is lost today, so after the two above) | G3 | open |
 | 6 | Designer pass of every screen at font scale 1.0 and max | G6 | open |
 | 7 | Delete recordings after send; host-side uploads cleanup | G7 | open |
 | 8 | Photos from album or camera (roadmap 2b, Aaron asked) | — | open |
@@ -44,3 +45,6 @@ Only commit on `wechat-look`. Never merge to main, change repo visibility, publi
 
 ## Round log
 
+### Round 1 · 21:50–22:25 Sydney, 2026-11-04
+
+PM chose backlog #1 and reordered (runbook and install guide before the spinner: they need Aaron's hands). Architect: `skills/xiaole/rem.py` (three raw tools over `co rem --root`), fictional fixture notebook with three traps, `benchmark/agent.py`, `empty_check.py`, five new benchmark cases, SKILL.md notebook and filter paragraphs, READMEs. Red: run f8e8, 9/11 attempts, `whatcha-doing` and `good-news` failing (no tool call; invented praise). Green: run 0e19, `--runs 2`, 22/22 attempts, 48/48 expectations, no trap word in any reply. Two false-green causes caught and removed before trusting it: a skill example that matched the fixture, and `given` texts that handed the model the answer. Commit 83819fd, verified on the remote. Designer skipped: no screen changed. SSH push to GitHub is refused on this machine tonight; pushes go over HTTPS.
