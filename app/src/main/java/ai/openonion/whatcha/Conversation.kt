@@ -23,6 +23,15 @@ data class Line(
 
 fun List<Line>.withoutNotes(): List<Line> = filterNot { it.note }
 
+const val VOICE_KEPT_MILLIS = 30L * 24 * 60 * 60 * 1_000
+
+/**
+ * Recordings the phone no longer needs: heard by the agent (DONE) and a month old. One still QUEUED, SENT or
+ * FAILED is kept however old, because a retry uploads the file again.
+ */
+fun List<Line>.staleVoices(now: Long): List<String> =
+    filter { it.voice != null && it.delivery == Delivery.DONE && it.at < now - VOICE_KEPT_MILLIS }.map { it.voice!! }
+
 // Plain words, no error code, and no promise the app cannot keep.
 const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下消息旁边红色的感叹号，再发一次。"
 

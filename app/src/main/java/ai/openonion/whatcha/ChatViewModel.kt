@@ -49,6 +49,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
 
     init {
         Log.i(TAG, "address=${Identity.load(app).address} agent=${pairing?.agent}")
+        _lines.value.staleVoices(System.currentTimeMillis()).forEach { File(it).delete() }
         link?.open()
     }
 
@@ -86,7 +87,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         if (_status.value == Status.ONLINE) sendQueued()
     }
 
+    /** The bubble stays after its recording was swept (a month after it was heard), so a tap says so instead of playing. */
     fun playVoice(path: String) {
+        if (!File(path).exists()) return Toast.makeText(getApplication(), "这条语音太久了，已经不在了", Toast.LENGTH_SHORT).show()
         voice.stop()
         player.toggle(path)
     }

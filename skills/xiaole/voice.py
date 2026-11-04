@@ -19,12 +19,20 @@ def loudest_db(path: str) -> float:
     return float(report.split("max_volume:")[1].split("dB")[0])
 
 
+def heard(path: str) -> str:
+    """The words in a recording. The phone sends AAC; the transcription service takes only wav and mp3."""
+    mp3 = Path(path).with_suffix(".mp3")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", path, str(mp3)], check=True)
+    words = transcribe(str(mp3), prompt="一位六十多岁的中国家长发给 AI 助手的语音，普通话，可能带口音")
+    mp3.unlink()
+    return words
+
+
 def transcribe_voice(path: str) -> str:
     """Turn a parent's voice message (an audio file) into the words they said."""
     # Given silence, the transcription service invents a sentence; so say there was nothing to hear.
-    if loudest_db(path) < -50:
-        return "（这条语音没有声音，什么也没录到）"
-    # The phone sends AAC; the transcription service takes only wav and mp3.
-    mp3 = str(Path(path).with_suffix(".mp3"))
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", path, mp3], check=True)
-    return transcribe(mp3, prompt="一位六十多岁的中国家长发给 AI 助手的语音，普通话，可能带口音")
+    silent = loudest_db(path) < -50
+    words = "（这条语音没有声音，什么也没录到）" if silent else heard(path)
+    # The upload has been heard; the phone keeps its own copy, so nothing is lost by removing it here.
+    Path(path).unlink()
+    return words

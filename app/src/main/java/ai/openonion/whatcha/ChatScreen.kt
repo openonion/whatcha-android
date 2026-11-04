@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +46,10 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -202,20 +205,24 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry:
     ) {
         if (!mine) Avatar(R.drawable.avatar_agent, agentName)
         if (!mine) Tail(pointsLeft = true, color = Color.White)
-        // WeChat puts the sending mark on the outer side of the parent's own bubble.
-        if (mine) DeliveryMark(line.delivery, onRetry)
-        // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read;
-        // tapping a voice message plays it. Weighted so the tail and avatar are measured first and keep their
-        // width; the bubble takes what is left, up to 270dp.
-        Box(
-            Modifier
-                .weight(1f, fill = false)
-                .widthIn(max = 270.dp)
-                .background(if (mine) ParentBubble else Color.White, RoundedCornerShape(6.dp))
-                .clickable(enabled = onTap != null) { onTap!!() }
-                .padding(horizontal = 14.dp, vertical = 12.dp)
-        ) {
-            content()
+        // The mark and the bubble share an inner row so the mark is centred on the bubble, as WeChat does,
+        // while tail and avatar stay at the top of the outer row. Weighted so the tail and avatar are measured
+        // first and keep their width; the bubble takes what is left, up to 270dp.
+        Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+            // WeChat puts the sending mark on the outer side of the parent's own bubble.
+            if (mine) DeliveryMark(line.delivery, onRetry)
+            // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read;
+            // tapping a voice message plays it.
+            Box(
+                Modifier
+                    .weight(1f, fill = false)
+                    .widthIn(max = 270.dp)
+                    .background(if (mine) ParentBubble else Color.White, RoundedCornerShape(6.dp))
+                    .clickable(enabled = onTap != null) { onTap!!() }
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                content()
+            }
         }
         if (mine) Tail(pointsLeft = false, color = ParentBubble)
         if (mine) Avatar(R.drawable.avatar_parent, "我")
@@ -225,9 +232,11 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry:
 // WeChat's marks beside a message of your own: a grey circle while it is on its way, a red ! to tap and
 // resend when it failed. The 60dp box (the elder target) stays, empty, once it is DONE, so a long bubble never changes width.
 @Composable
-private fun RowScope.DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
+private fun DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
+    val failed = delivery == Delivery.FAILED
     Box(
-        Modifier.size(TargetSize).align(Alignment.CenterVertically).clickable(enabled = delivery == Delivery.FAILED) { onRetry() },
+        Modifier.size(TargetSize).clickable(enabled = failed) { onRetry() }
+            .then(if (failed) Modifier.semantics { contentDescription = "没发出去，点一下再发一次"; role = Role.Button } else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         when (delivery) {

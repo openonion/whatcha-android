@@ -37,4 +37,31 @@ class VoiceTest {
         val lines = Json.decodeFromString<List<Line>>("""[{"fromParent":true,"text":"吃了吗","at":1}]""")
         assertNull(lines.single().voice)
     }
+
+    private val day = 24 * 60 * 60 * 1_000L
+    private val now = 100 * day
+    private fun voice(delivery: Delivery, daysAgo: Int) =
+        Line(fromParent = true, text = "[语音 3秒]", at = now - daysAgo * day, delivery = delivery, voice = "/v/$daysAgo.m4a", seconds = 3)
+
+    @Test
+    fun aVoiceOlderThanAMonthIsSweptOnceItIsDone() {
+        assertEquals(listOf("/v/31.m4a"), listOf(voice(Delivery.DONE, 31)).staleVoices(now))
+    }
+
+    @Test
+    fun aVoiceStillOnItsWayIsNeverSweptHoweverOld() {
+        val waiting = listOf(voice(Delivery.QUEUED, 40), voice(Delivery.SENT, 40), voice(Delivery.FAILED, 40))
+        assertEquals(emptyList<String>(), waiting.staleVoices(now))
+    }
+
+    @Test
+    fun aRecentVoiceStays() {
+        assertEquals(emptyList<String>(), listOf(voice(Delivery.DONE, 29)).staleVoices(now))
+    }
+
+    @Test
+    fun aTextLineHasNoFileToSweep() {
+        val text = Line(fromParent = true, text = "吃了吗", at = now - 40 * day, delivery = Delivery.DONE)
+        assertEquals(emptyList<String>(), listOf(text).staleVoices(now))
+    }
 }

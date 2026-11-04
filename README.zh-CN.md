@@ -74,7 +74,7 @@ app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill
 - 收到语音先转成文字再回答；没录上声音就请爸妈再说一遍；
 - 只说 app 能做到的事（打字、按住说话、点回复重听），不说「我给你打电话」「给你发张照片」。
 
-语音消息需要 agent 有一个转写工具：把 [`skills/xiaole/voice.py`](skills/xiaole/voice.py) 复制到 `agent.py` 旁边，传 `tools=[transcribe_voice]`，机器上要有 `ffmpeg`。它会先查有没有声音，因为对着一段静音，转写服务会编出一句话来。
+语音消息需要 agent 有一个转写工具：把 [`skills/xiaole/voice.py`](skills/xiaole/voice.py) 复制到 `agent.py` 旁边，传 `tools=[transcribe_voice]`，机器上要有 `ffmpeg`。它会先查有没有声音，因为对着一段静音，转写服务会编出一句话来。录音在手机上保留 30 天；agent 每听完一条就把上传的文件删掉。
 
 回答「在干嘛」需要 agent 能读子女的笔记本：把 [`skills/xiaole/rem.py`](skills/xiaole/rem.py) 复制到 `agent.py` 旁边，传它的三个工具 `recent_sessions`、`show_page`、`search_notebook`。它们读 `co rem` 的笔记本（`~/.co/rem`，或 `REM_ROOT`），把页面原样交给 agent；skill 只从中取工作的部分，钱、身体、感情不说。
 
