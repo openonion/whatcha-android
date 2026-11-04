@@ -6,3 +6,6 @@ local.properties
 .DS_Store
 *.apk
 __pycache__/
+family-agent/.env
+family-agent/.co/*
+!family-agent/.co/host.yaml

@@ -49,19 +49,7 @@
 ./gradlew :app:assembleDebug :app:testDebugUnitTest
 ```
 
-起一个接受邀请码的 agent：
-
-```bash
-CO_INVITE_CODE=随便起一个码 co host
-```
-
-给一家人打一个包并安装：
-
-```bash
-python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk 在干嘛-家里.apk \
-  --agent 0x你的agent地址 --invite 随便起一个码
-adb install 在干嘛-家里.apk
-```
+给一家人把小乐跑起来，从头到尾的步骤见 [RUNBOOK.md](RUNBOOK.md)（英文）：[`family-agent/`](family-agent/) 里的 agent 作为登录即启动的服务、打包 APK、冒烟测试。爸妈手机那一边的安装步骤见 [INSTALL.zh-CN.md](INSTALL.zh-CN.md)（华为手机）。
 
 ## 路线
 
@@ -77,7 +65,7 @@ adb install 在干嘛-家里.apk
 
 ## 小乐：agent 这一侧
 
-app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill 决定：[`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md)，复制到你的 agent 的 `.co/skills/xiaole/` 即可。它要求 agent：
+app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill 决定：[`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md)。[`family-agent/agent.py`](family-agent/agent.py) 就地加载它和下面的工具；要给别的 agent 用，复制到那个 agent 的 `.co/skills/xiaole/` 即可。它要求 agent：
 
 - 直说自己是 AI，从不以子女的口吻说话；
 - 只讲真实发生的事，不知道就说「我帮你问问」；

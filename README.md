@@ -49,19 +49,7 @@ Build the app and run the tests. You need JDK 17 and the Android SDK with API 36
 ./gradlew :app:assembleDebug :app:testDebugUnitTest
 ```
 
-Start an agent that accepts an invite code:
-
-```bash
-CO_INVITE_CODE=pick-a-code co host
-```
-
-Pack a copy for one family and install it:
-
-```bash
-python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.apk \
-  --agent 0xYOUR_AGENT_ADDRESS --invite pick-a-code
-adb install whatcha-family.apk
-```
+To run 小乐 for one family, start to finish on the child's Mac, follow [RUNBOOK.md](RUNBOOK.md): the agent in [`family-agent/`](family-agent/) as a login service, the packed APK, the smoke test. The parents' phone side is in [INSTALL.zh-CN.md](INSTALL.zh-CN.md) (Chinese, for a Huawei phone).
 
 ## Roadmap
 
@@ -77,7 +65,7 @@ adb install whatcha-family.apk
 
 ## 小乐, the agent's side
 
-The app is only the parents' end. What 小乐 says is decided by a skill on the child's agent: [`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md). Copy it into your agent's `.co/skills/xiaole/`. It tells the agent to:
+The app is only the parents' end. What 小乐 says is decided by a skill on the child's agent: [`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md). [`family-agent/agent.py`](family-agent/agent.py) runs it in place with the tools below; for another agent, copy it into its `.co/skills/xiaole/`. It tells the agent to:
 
 - say it is an AI, and never speak as the child;
 - tell only what really happened, and say "I'll ask" when it does not know;
