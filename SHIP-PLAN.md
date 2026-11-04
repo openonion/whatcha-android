@@ -17,8 +17,8 @@ The session owner verifies the evidence, logs the round here and in the journal,
 - [x] G3 A parent's text or voice message is never lost, and the screen says when one is still on its way or failed.
 - [~] G4 The child's own agent (the real `~/.co` identity, not the test agent) runs `co host` as a launchd service with the xiaole skill, voice and REM tools, and survives a reboot. A `RUNBOOK.md` says how, in under a page.
 - [~] G5 The APK packed for that agent installs on a Huawei phone and pairs on first launch. Install steps for the child are written in Chinese, including the unknown-sources warning.
-- [~] G6 Every screen has been judged by the designer against WeChat and the elder rules, at normal and largest system font.
-- [ ] G7 Recordings and uploads do not grow forever.
+- [x] G6 (6i and 6u cosmetic, parked; 6e StatusStrip only if Huawei 特大 wraps) Every screen has been judged by the designer against WeChat and the elder rules, at normal and largest system font.
+- [x] G7 Recordings and uploads do not grow forever.
 
 G4 and G5 need Aaron's hands (his identity, his parents' phone). Everything else is prepared so that those two take him minutes, not an evening.
 
@@ -56,6 +56,7 @@ G4 and G5 need Aaron's hands (his identity, his parents' phone). Everything else
 | 7 | Delete recordings after send; host-side uploads cleanup | G7 | done round 7: phone sweeps DONE recordings older than 30 days at launch (`staleVoices`, 4 tests), a tap on a swept bubble says 「这条语音太久了，已经不在了」 (`voice-gone.png`, `voice-swept.png`); `transcribe_voice` unlinks the upload and its mp3 in both branches |
 | 8 | Photos from album or camera (roadmap 2b, Aaron asked) | — | open |
 | 9 | Picture avatars (Aaron asked 11-03 22:15) | — | open |
+| 6u | After 6r a one-line parent bubble sits ~4dp below the avatar's top (bubble and avatar share a centre); WeChat aligns the bubble top with the avatar top. Cosmetic | G6 | parked |
 
 Parked, needs connectonion: host-to-phone push (proactive messages, child answering in the same thread), second roles (clone, son-in-law) need a conversation list.
 
@@ -105,3 +106,7 @@ PM chose 6l (the failure note stayed after a successful resend) with 6g folded i
 ### Round 6 · 02:32–02:52 Sydney, 2026-11-05
 
 PM chose 1b with 6e and 6f folded in, and put the real-notebook spot check on Aaron's Saturday checklist (only he can judge whether an answer about him is true). Architect: three yaml cases that force 小乐 to read the project page that carries the traps (「他那个项目进展怎么样」「他那个店的老板对他满意吗」「他那个项目钱收到了吗」); all 15 cases passed on the first run, `--runs 2`, 30/30 attempts, 76/76 expectations, the session owner grepped all 30 replies for 18 trap words: none. The cases stay as guards; nothing was weakened and no SKILL.md rule was added; one contradiction in a SKILL.md example (挺累) removed. App: header side margins 24dp, recording card min-size instead of fixed; 43 tests green; `design-unpaired-1.3.png` and `design-recording-1.3.png` re-shot at font_scale 1.3. RUNBOOK gained a Saturday checklist (real-notebook check, Huawei dialog wording, mic permission, one reboot). Commit 4197c14, verified on the remote; emulator restored. Open for the judge's taste: 「店老板挺满意的」 is one notch above "said thanks". Designer skipped: the two layout changes were its own one-liners, now seen.
+
+### Round 7 · 03:32–03:50 Sydney, 2026-11-05
+
+PM chose G7 (backlog #7) with 6r and 6s folded in. Rule: a recording is deleted once its line is DONE and older than 30 days, never while QUEUED/SENT/FAILED; the agent removes each upload after transcribing. Architect: `List<Line>.staleVoices(now)` with four red-first tests (compile-red on the old code), sweep in `ChatViewModel.init`, `playVoice` shows 「这条语音太久了，已经不在了」 when the file is gone; `voice.py` unlinks the upload (and its mp3) in both branches, proven by the test agent's voice check (fixture intact, uploads 16 before → 16 after, then the stale 16 removed) and two real voice messages through the host. 6s: TalkBack description on the red mark, seen in a uiautomator dump (`content-desc="没发出去，点一下再发一次"`, 60dp box). 6r: inner centred row, spinner centre 0px off the bubble centre, long bubble still top-aligned with a 60dp avatar; side effect noted as 6u. Emulator: `voice-gone.png` (Toast, no crash), `voice-swept.png` (a DONE voice set 31 days back, relaunch, file gone, bubble stays), `sending-queued.png` and `sending-long.png` re-shot. 47 tests green. Commit 2ea03af, verified on the remote; emulator restored, test agent restored byte-identical. G6 and G7 green. Every open item now needs Aaron's identity or the parents' phone: the delivery note is due.
