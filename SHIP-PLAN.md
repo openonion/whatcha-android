@@ -17,7 +17,7 @@ The session owner verifies the evidence, logs the round here and in the journal,
 - [ ] G3 A parent's text or voice message is never lost, and the screen says when one is still on its way or failed.
 - [ ] G4 The child's own agent (the real `~/.co` identity, not the test agent) runs `co host` as a launchd service with the xiaole skill, voice and REM tools, and survives a reboot. A `RUNBOOK.md` says how, in under a page.
 - [ ] G5 The APK packed for that agent installs on a Huawei phone and pairs on first launch. Install steps for the child are written in Chinese, including the unknown-sources warning.
-- [ ] G6 Every screen has been judged by the designer against WeChat and the elder rules, at normal and largest system font.
+- [~] G6 Every screen has been judged by the designer against WeChat and the elder rules, at normal and largest system font.
 - [ ] G7 Recordings and uploads do not grow forever.
 
 G4 and G5 need Aaron's hands (his identity, his parents' phone). Everything else is prepared so that those two take him minutes, not an evening.
@@ -59,7 +59,7 @@ Only commit on `wechat-look`. Never merge to main, change repo visibility, publi
 
 PM chose backlog #1 and reordered (runbook and install guide before the spinner: they need Aaron's hands). Architect: `skills/xiaole/rem.py` (three raw tools over `co rem --root`), fictional fixture notebook with three traps, `benchmark/agent.py`, `empty_check.py`, five new benchmark cases, SKILL.md notebook and filter paragraphs, READMEs. Red: run f8e8, 9/11 attempts, `whatcha-doing` and `good-news` failing (no tool call; invented praise). Green: run 0e19, `--runs 2`, 22/22 attempts, 48/48 expectations, no trap word in any reply. Two false-green causes caught and removed before trusting it: a skill example that matched the fixture, and `given` texts that handed the model the answer. Commit 83819fd, verified on the remote. Designer skipped: no screen changed. SSH push to GitHub is refused on this machine tonight; pushes go over HTTPS.
 
-### Round 2 · 22:30–23:30 Sydney, 2026-11-04
+### Round 2 · 22:32–23:15 Sydney, 2026-11-04
 
 PM chose G2. Premise checked and held: connectonion's host passes `session=` into `agent.input` (`network/host/session/turn.py`),
 writes the turn back, and on CONNECT with a saved session_id reloads it from `.co/session_results.jsonl`
@@ -78,4 +78,4 @@ Emulator: packed APK for the test agent, `What is he doing today` → notebook a
 (`memory-after-restart.png`). Host log: `session=9e76c1a7… status=new`, two INPUTs, then after restart
 `CONNECT … session=9e76c1a7… status=connected` and the third INPUT on the same id. Questions were typed in
 English: `adb shell input text` cannot type CJK on this emulator and a Unicode-input IME could not be installed.
-Designer skipped: no screen changed.
+Designer did backlog #6 (the full pass, 15 screenshots at 1.0 and 1.3): ten findings 6a–6j in the backlog, two one-line fixes (grey text 3.0:1 → 4.9:1, opaque recording card), commit ad157b5. The sharpest finding, 6a: a message written while the link is down looks exactly like a sent one, which makes the sending-state item (#5) the next client change. Verified by the session owner: remote at ad157b5, emulator back at the launcher, font_scale reset.
