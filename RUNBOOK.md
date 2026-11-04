@@ -56,7 +56,7 @@ Both keep `.co/` (identity, conversations, logs).
 ## Saturday checklist
 
 1. Real-notebook spot check: run the agent once with the test key against the real `~/.co/rem`, read the reply, keep it local; never paste it anywhere.
-2. Confirm the Huawei dialog wording in `INSTALL.zh-CN.md` on the phone.
+2. Confirm the Huawei dialog wording in `INSTALL.zh-CN.md` on the phone. Then set the phone's 字体 to its largest (设置 → 显示 → 字体大小与粗细) and look at: the composer in both modes (按住 说话 on one line, 发送 whole), the status strip (turn Wi-Fi off: 「暂时联系不上，」 then 「稍后会自己重试」 on their own lines), the recording card while holding the bar, and one failed message (its red ! must be a 感叹号, not a bar). The emulator at `font_scale 2.0` passed all of these (`screenshots/*-2.0.png`); the Huawei at 超大 is the real check.
 3. Tap the round button once and 允许 the microphone during setup, so the parents never see the dialog.
 4. Reboot the Mac once, log in, and confirm `co host --status` says running.
 
