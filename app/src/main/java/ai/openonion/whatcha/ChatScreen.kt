@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -86,7 +87,8 @@ fun ChatScreen(vm: ChatViewModel) {
 
     Box(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
         Column(Modifier.fillMaxSize()) {
-            Header(headerTitle(title, lines), status)
+            Header(headerTitle(title, lines))
+            statusText(status)?.let { StatusStrip(it) }
             val hint = emptyHint(title, lines, status)
             if (hint != null) EmptyHint(hint, Modifier.weight(1f))
             else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onRetry = vm::retry, modifier = Modifier.weight(1f))
@@ -112,12 +114,23 @@ private fun RecordingCard(modifier: Modifier) {
 }
 
 @Composable
-private fun Header(title: String, status: Status) {
-    Column(Modifier.fillMaxWidth().background(ChatBackground).padding(horizontal = 24.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(title, style = Body.copy(fontWeight = FontWeight.Medium))
-        statusText(status)?.let { Text(it, style = Small) }
-    }
+private fun Header(title: String) {
+    Text(title, style = Body.copy(fontWeight = FontWeight.Medium), textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().background(ChatBackground).padding(horizontal = 24.dp, vertical = 14.dp))
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
+}
+
+// WeChat shows link trouble as a pale red strip under the title, a red circled ! and dark text, not as a grey subtitle.
+@Composable
+private fun StatusStrip(text: String) {
+    Row(
+        Modifier.fillMaxWidth().background(Color(0xFFFDECEC)).heightIn(min = TargetSize).padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RedBang()
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = Body)
+    }
 }
 
 // A blank grey page gives a parent no reason to type; say what this is for until the first message.
@@ -135,12 +148,13 @@ private fun EmptyHint(hint: String, modifier: Modifier) {
 internal fun headerTitle(name: String, lines: List<Line>): String =
     if (lines.any { it.delivery == Delivery.SENT }) "对方正在输入..." else name
 
-// The parent only ever sees a plain sentence, never an error code.
-private fun statusText(status: Status): String? = when (status) {
-    Status.UNPAIRED -> "还没有连上，请让孩子重新发一个安装包"
+// The parent only ever sees a plain sentence, never an error code. One clause per line: at the largest
+// system font a clause of eight characters still fits the strip, a whole sentence wrapped mid-word.
+internal fun statusText(status: Status): String? = when (status) {
+    Status.UNPAIRED -> "还没有连上，\n请让孩子\n重新发一个安装包"
     Status.CONNECTING -> "正在连接…"
     Status.ONLINE -> null
-    Status.OFFLINE -> "暂时联系不上，稍后会自己重试"
+    Status.OFFLINE -> "暂时联系不上，\n稍后会自己重试"
 }
 
 @Composable
@@ -245,11 +259,19 @@ private fun DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
     ) {
         when (delivery) {
             Delivery.QUEUED, Delivery.SENT -> CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF666666), strokeWidth = 3.dp)
-            Delivery.FAILED -> Box(Modifier.size(24.dp).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
-                Text("!", style = TextStyle(fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold))
-            }
+            Delivery.FAILED -> RedBang()
             Delivery.DONE -> Unit
         }
+    }
+}
+
+// WeChat's red circled !. The glyph is sized in dp, not sp: at the largest system font an sp glyph
+// outgrew the 24dp circle and read as a white bar (sending-failed-2.0.png before this).
+@Composable
+private fun RedBang() {
+    val glyph = with(LocalDensity.current) { 18.dp.toSp() }
+    Box(Modifier.size(24.dp).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
+        Text("!", style = TextStyle(fontSize = glyph, color = Color.White, fontWeight = FontWeight.Bold))
     }
 }
 
