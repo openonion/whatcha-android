@@ -58,7 +58,7 @@ import java.util.Locale
 // Looks and behaves like a WeChat chat, because WeChat is the one app parents already know.
 // Sizes follow MIIT's 2021 elderly-app spec: main text >= 18, main targets >= 60x60, line height >= 1.3x.
 private val Body = TextStyle(fontSize = 24.sp, lineHeight = 34.sp, color = Color(0xFF111111))
-private val Small = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, color = Color(0xFF888888))
+private val Small = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, color = Color(0xFF666666))
 private val ChatBackground = Color(0xFFEDEDED)
 private val BarBackground = Color(0xFFF7F7F7)
 private val Divider = Color(0xFFD9D9D9)
@@ -91,7 +91,7 @@ fun ChatScreen(vm: ChatViewModel) {
 @Composable
 private fun RecordingCard(modifier: Modifier) {
     Column(
-        modifier.size(200.dp).background(Color(0xCC000000), RoundedCornerShape(12.dp)),
+        modifier.size(200.dp).background(Color(0xFF2F2F2F), RoundedCornerShape(12.dp)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
