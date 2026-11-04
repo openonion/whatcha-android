@@ -159,12 +159,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         save(_lines.value.failOldest(message))
     }
 
+    // Stays OFFLINE while retrying: the strip must not appear and vanish every 5 s. onConnected sets ONLINE.
     override fun onDisconnected(reason: String) {
         Log.w(TAG, "disconnected: $reason")
         _status.value = Status.OFFLINE
         viewModelScope.launch {
             delay(RECONNECT_DELAY_MS)
-            _status.value = Status.CONNECTING
             link?.open()
         }
     }

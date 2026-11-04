@@ -87,7 +87,7 @@ fun ChatScreen(vm: ChatViewModel) {
 
     Box(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
         Column(Modifier.fillMaxSize()) {
-            Header(headerTitle(title, lines))
+            Header(headerTitle(title, lines, status))
             statusText(status)?.let { StatusStrip(it) }
             val hint = emptyHint(title, lines, status)
             if (hint != null) EmptyHint(hint, Modifier.weight(1f))
@@ -144,15 +144,20 @@ private fun EmptyHint(hint: String, modifier: Modifier) {
     }
 }
 
-// WeChat's own words while the other side is writing, so the parent knows to wait.
-internal fun headerTitle(name: String, lines: List<Line>): String =
-    if (lines.any { it.delivery == Delivery.SENT }) "对方正在输入..." else name
+// WeChat's own words: 「对方正在输入...」 while the other side is writing, 「微信(连接中…)」 in the title on a cold
+// launch, so the parent knows to wait and sees nothing red. CONNECTING only ever means that first connection.
+internal fun headerTitle(name: String, lines: List<Line>, status: Status): String = when {
+    lines.any { it.delivery == Delivery.SENT } -> "对方正在输入..."
+    status == Status.CONNECTING -> "$name(连接中…)"
+    else -> name
+}
 
-// The parent only ever sees a plain sentence, never an error code. One clause per line: at the largest
-// system font a clause of eight characters still fits the strip, a whole sentence wrapped mid-word.
+// The strip is only for trouble, as WeChat's is only for 网络不可用. The parent only ever sees a plain
+// sentence, never an error code. One clause per line: at the largest system font a clause of eight characters
+// still fits beside the !, a ninth wrapped onto a third line and a whole sentence wrapped mid-word.
 internal fun statusText(status: Status): String? = when (status) {
-    Status.UNPAIRED -> "还没有连上，\n请让孩子\n重新发一个安装包"
-    Status.CONNECTING -> "正在连接…"
+    Status.UNPAIRED -> "还没连上，\n让孩子重发安装包"
+    Status.CONNECTING -> null
     Status.ONLINE -> null
     Status.OFFLINE -> "暂时联系不上，\n稍后会自己重试"
 }
@@ -265,13 +270,14 @@ private fun DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
     }
 }
 
-// WeChat's red circled !. The glyph is sized in dp, not sp: at the largest system font an sp glyph
-// outgrew the 24dp circle and read as a white bar (sending-failed-2.0.png before this).
+// WeChat's red circled !. Circle and glyph are both in sp, so they grow with the system font and keep their
+// ratio: 24dp at 1.0, ~36dp at the largest font, still inside the 60dp delivery box and about the height
+// of the strip's text. (A dp circle with an sp glyph read as a white bar; a dp pair stayed tiny beside big text.)
 @Composable
 private fun RedBang() {
-    val glyph = with(LocalDensity.current) { 18.dp.toSp() }
-    Box(Modifier.size(24.dp).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
-        Text("!", style = TextStyle(fontSize = glyph, color = Color.White, fontWeight = FontWeight.Bold))
+    val circle = with(LocalDensity.current) { 24.sp.toDp() }
+    Box(Modifier.size(circle).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
+        Text("!", style = TextStyle(fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold))
     }
 }
 
