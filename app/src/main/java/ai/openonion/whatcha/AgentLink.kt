@@ -28,6 +28,8 @@ class AgentLink(
         fun onError(message: String)
         /** The host no longer knows this phone (it restarted); CONNECT has been sent again. */
         fun onRejected()
+        /** The host will not take this phone's invite code (wrong, or none packed); nothing more is sent. */
+        fun onRefused()
         fun onDisconnected(reason: String)
     }
 
@@ -52,8 +54,7 @@ class AgentLink(
                 sessionId = frame.string("session_id") ?: sessionId
                 listener.onConnected(sessionId!!, frame.string("status") == "running")
             }
-            // The agent has not met this phone yet: present the invite code packed into the APK.
-            "ONBOARD_REQUIRED" -> webSocket.send(wire.onboard(pairing.invite!!))
+            "ONBOARD_REQUIRED" -> onboard(webSocket)
             "AGENT_PROFILE" -> frame.string("name")?.let(listener::onProfile)
             "PING" -> webSocket.send(wire.pong())
             "OUTPUT" -> listener.onReply(frame.string("result").orEmpty())
@@ -61,7 +62,20 @@ class AgentLink(
         }
     }
 
+    // The agent has not met this phone yet: present the invite code packed into the APK, if the pack had one.
+    private fun onboard(webSocket: WebSocket) {
+        val invite = pairing.invite ?: return refused(webSocket)
+        webSocket.send(wire.onboard(invite))
+    }
+
+    // The relay keeps a refused socket open, so drop it here: onFailure then schedules the retry that picks up a corrected host.
+    private fun refused(webSocket: WebSocket) {
+        listener.onRefused()
+        webSocket.cancel()
+    }
+
     private fun onError(webSocket: WebSocket, message: String) {
+        if (message.startsWith(INVITE_REFUSED)) return refused(webSocket)
         if (!message.startsWith(HOST_FORGOT_US)) return listener.onError(message)
         webSocket.send(wire.connect(sessionId))
         listener.onRejected()
@@ -80,5 +94,8 @@ class AgentLink(
 
 // What a Host answers to INPUT on a connection that has not sent CONNECT, e.g. after the Host restarted.
 private const val HOST_FORGOT_US = "authenticate first"
+
+// What a Host answers to ONBOARD_SUBMIT with a code it does not accept (connectonion network/trust/ws_admin.py).
+private const val INVITE_REFUSED = "Invalid invite code"
 
 private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.content

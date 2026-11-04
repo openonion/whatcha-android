@@ -14,10 +14,11 @@ class AgentLinkTest {
 
     private class Sent : WebSocket {
         val frames = mutableListOf<String>()
+        var cancelled = false
         override fun send(text: String): Boolean { frames += text; return true }
         override fun send(bytes: ByteString) = true
         override fun close(code: Int, reason: String?) = true
-        override fun cancel() {}
+        override fun cancel() { cancelled = true }
         override fun queueSize() = 0L
         override fun request(): Request = Request.Builder().url("https://relay.test").build()
     }
@@ -29,6 +30,7 @@ class AgentLinkTest {
         override fun onReply(text: String) {}
         override fun onError(message: String) { events += "error" }
         override fun onRejected() { events += "rejected" }
+        override fun onRefused() { events += "refused" }
         override fun onDisconnected(reason: String) {}
     }
 
@@ -57,6 +59,38 @@ class AgentLinkTest {
         link.onMessage(socket, """{"type":"ERROR","message":"authenticate first (send CONNECT)"}""")
         assertEquals(listOf("rejected"), heard.events)
         assertEquals("CONNECT", Json.parseToJsonElement(socket.frames.single()).jsonObject["type"]!!.jsonPrimitive.content)
+    }
+
+    // The host's exact text: connectonion 1.9.3rc41 network/trust/ws_admin.py:101 sends
+    // {"type": "ERROR", "message": "Invalid invite code"} and prints "✗ Invalid invite code from 0x…" (:98).
+    // The relay keeps the refused socket open (seen 80 s+), so the link drops it itself and the 5 s retry can run.
+    @Test
+    fun aRefusedInviteCodeIsReportedAsRefusedAndTheSocketDropped() {
+        val socket = Sent()
+        link.onMessage(socket, """{"type":"ERROR","message":"Invalid invite code"}""")
+        assertEquals(listOf("refused"), heard.events)
+        assertEquals(true, socket.cancelled)
+    }
+
+    @Test
+    fun anAPKPackedWithoutAnInviteCodeIsRefusedWithoutSendingAnything() {
+        val bare = AgentLink(Pairing(agent = "0xagent", invite = null), Wire(me, "0xagent", now = { 1L }), heard)
+        val socket = Sent()
+        bare.onMessage(socket, """{"type":"ONBOARD_REQUIRED"}""")
+        assertEquals(listOf("refused"), heard.events)
+        assertEquals(emptyList<String>(), socket.frames)
+        assertEquals(true, socket.cancelled)
+    }
+
+    @Test
+    fun anAPKPackedWithAnInviteCodePresentsIt() {
+        val packed = AgentLink(Pairing(agent = "0xagent", invite = "whatcha-e2e-9c1d"), Wire(me, "0xagent", now = { 1L }), heard)
+        val socket = Sent()
+        packed.onMessage(socket, """{"type":"ONBOARD_REQUIRED"}""")
+        val frame = Json.parseToJsonElement(socket.frames.single()).jsonObject
+        assertEquals("ONBOARD_SUBMIT", frame["type"]!!.jsonPrimitive.content)
+        assertEquals("whatcha-e2e-9c1d", frame["payload"]!!.jsonObject["invite_code"]!!.jsonPrimitive.content)
+        assertEquals(emptyList<String>(), heard.events)
     }
 
     @Test
