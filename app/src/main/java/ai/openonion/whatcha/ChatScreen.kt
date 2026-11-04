@@ -204,11 +204,12 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry:
         if (!mine) Tail(pointsLeft = true, color = Color.White)
         // WeChat puts the sending mark on the outer side of the parent's own bubble.
         if (mine) DeliveryMark(line.delivery, onRetry)
-        if (mine) Spacer(Modifier.width(8.dp))
         // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read;
-        // tapping a voice message plays it.
+        // tapping a voice message plays it. Weighted so the tail and avatar are measured first and keep their
+        // width; the bubble takes what is left, up to 270dp.
         Box(
             Modifier
+                .weight(1f, fill = false)
                 .widthIn(max = 270.dp)
                 .background(if (mine) ParentBubble else Color.White, RoundedCornerShape(6.dp))
                 .clickable(enabled = onTap != null) { onTap!!() }
@@ -222,17 +223,17 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry:
 }
 
 // WeChat's marks beside a message of your own: a grey circle while it is on its way, a red ! to tap and
-// resend when it failed. The 48dp box stays, empty, once it is DONE, so a long bubble never changes width.
+// resend when it failed. The 60dp box (the elder target) stays, empty, once it is DONE, so a long bubble never changes width.
 @Composable
 private fun RowScope.DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
     Box(
-        Modifier.size(48.dp).align(Alignment.CenterVertically).clickable(enabled = delivery == Delivery.FAILED) { onRetry() },
+        Modifier.size(TargetSize).align(Alignment.CenterVertically).clickable(enabled = delivery == Delivery.FAILED) { onRetry() },
         contentAlignment = Alignment.Center,
     ) {
         when (delivery) {
-            Delivery.QUEUED, Delivery.SENT -> CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF999999), strokeWidth = 2.dp)
-            Delivery.FAILED -> Box(Modifier.size(20.dp).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
-                Text("!", style = TextStyle(fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Bold))
+            Delivery.QUEUED, Delivery.SENT -> CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF666666), strokeWidth = 3.dp)
+            Delivery.FAILED -> Box(Modifier.size(24.dp).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
+                Text("!", style = TextStyle(fontSize = 18.sp, color = Color.White, fontWeight = FontWeight.Bold))
             }
             Delivery.DONE -> Unit
         }

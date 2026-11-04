@@ -21,7 +21,7 @@ data class Line(
 )
 
 // Plain words, no error code, and no promise the app cannot keep.
-const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下红色的感叹号再发一次。"
+const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下消息旁边红色的感叹号，再发一次。"
 
 /** Messages written while the link was down, or that the host refused: they go out on the next CONNECTED. */
 fun List<Line>.queued(): List<Line> = filter { it.delivery == Delivery.QUEUED }
