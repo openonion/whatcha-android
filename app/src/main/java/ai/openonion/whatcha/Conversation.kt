@@ -37,8 +37,14 @@ fun List<Line>.staleVoices(now: Long): List<String> =
 // Plain words, no error code, and no promise the app cannot keep.
 const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下消息旁边红色的感叹号，再发一次。"
 
-/** Messages written while the link was down, or that the host refused: they go out on the next CONNECTED. */
-fun List<Line>.queued(): List<Line> = filter { it.delivery == Delivery.QUEUED }
+/**
+ * The one message to send now, or null. The host takes one INPUT per turn: a second one while a turn runs is
+ * answered with `ERROR running turn is not accepting runtime input` (connectonion 1.9.3rc41), which would land
+ * on the first message as a failure. So nothing goes out while a message is SENT; after its OUTPUT or ERROR
+ * the first QUEUED line follows, and lines written while the link was down go out one by one on reconnect.
+ */
+fun List<Line>.nextToSend(): Line? =
+    if (any { it.delivery == Delivery.SENT }) null else firstOrNull { it.delivery == Delivery.QUEUED }
 
 /** Replies carry no id, and the agent answers in order, so a reply belongs to the oldest message still waiting. */
 fun List<Line>.answerOldest(): List<Line> {

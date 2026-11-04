@@ -106,14 +106,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         if (_status.value == Status.ONLINE) sendQueued()
     }
 
-    // Everything the parent wrote goes out in order, however long the link was down.
+    // One message at a time, in order: the next goes out from onReply or onError, however long the link was down.
     private fun sendQueued() {
-        for (line in _lines.value.queued()) {
-            val sound = line.voice?.let { File(it) }?.let { Voice(it.name, it.readBytes()) }
-            val picture = line.photo?.let { File(it).readBytes() }
-            if (!link!!.send(line.text, sound, picture)) return
-            save(_lines.value.markSent(line))
-        }
+        val line = _lines.value.nextToSend() ?: return
+        val sound = line.voice?.let { File(it) }?.let { Voice(it.name, it.readBytes()) }
+        val picture = line.photo?.let { File(it).readBytes() }
+        if (link!!.send(line.text, sound, picture)) save(_lines.value.markSent(line))
     }
 
     // A tap on 小乐's bubble reads it again, or stops it if that is the one being read.
@@ -158,11 +156,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         save(_lines.value.answerOldest())
         append(Line(fromParent = false, text = text, at = System.currentTimeMillis()))
         speak(text)
+        sendQueued()
     }
 
     override fun onError(message: String) = onMain {
         Log.w(TAG, "agent error: $message")
         save(_lines.value.failOldest(message))
+        sendQueued()
     }
 
     // Stays OFFLINE (or UNPAIRED) while retrying: the strip must not change every 5 s. onConnected sets ONLINE.
