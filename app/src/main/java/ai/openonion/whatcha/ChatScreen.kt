@@ -94,7 +94,7 @@ fun ChatScreen(vm: ChatViewModel) {
 @Composable
 private fun RecordingCard(modifier: Modifier) {
     Column(
-        modifier.size(200.dp).background(Color(0xFF2F2F2F), RoundedCornerShape(12.dp)),
+        modifier.widthIn(min = 200.dp).heightIn(min = 200.dp).background(Color(0xFF2F2F2F), RoundedCornerShape(12.dp)).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -107,7 +107,7 @@ private fun RecordingCard(modifier: Modifier) {
 
 @Composable
 private fun Header(title: String, status: Status) {
-    Column(Modifier.fillMaxWidth().background(ChatBackground).padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth().background(ChatBackground).padding(horizontal = 24.dp, vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(title, style = Body.copy(fontWeight = FontWeight.Medium))
         statusText(status)?.let { Text(it, style = Small) }
     }

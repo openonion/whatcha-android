@@ -53,6 +53,13 @@ co host --uninstall    # also removes ~/Library/LaunchAgents/ai.connectonion.hos
 
 Both keep `.co/` (identity, conversations, logs).
 
+## Saturday checklist
+
+1. Real-notebook spot check: run the agent once with the test key against the real `~/.co/rem`, read the reply, keep it local; never paste it anywhere.
+2. Confirm the Huawei dialog wording in `INSTALL.zh-CN.md` on the phone.
+3. Tap the round button once and 允许 the microphone during setup, so the parents never see the dialog.
+4. Reboot the Mac once, log in, and confirm `co host --status` says running.
+
 ## What is never committed
 
 `family-agent/.env`, `family-agent/.co/*` except `host.yaml` (keys, contacts, `session_results.jsonl`, uploads, logs), `*.apk`, the agent's address, and the parents' or the child's real names. `.gitignore` already covers the files; the address and names are on you.

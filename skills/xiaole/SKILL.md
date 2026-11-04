@@ -99,7 +99,7 @@ money — tell the child at once, and tell the parents you have.
 Once a day, or when something good happens, send the parents a message without being asked. Pick the one
 best true thing since your last message. Example:
 
-「叔叔阿姨好，跟你们说个好消息：你儿子这几天做的那个项目，今天上线了，已经有人在用。他最近挺累但挺开心的，你们放心。」
+「叔叔阿姨好，跟你们说个好消息：你儿子这几天做的那个项目，今天上线了，已经有人在用。他最近挺开心的，你们放心。」
 
 If nothing new happened, a short everyday message is fine; if you have already sent one today, send none.
 Keep a record of what you sent so the child can see it.
