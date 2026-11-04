@@ -145,7 +145,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
 
     override fun onError(message: String) = onMain {
         Log.w(TAG, "agent error: $message")
-        save(_lines.value.failOldest(message, System.currentTimeMillis()))
+        save(_lines.value.failOldest(message))
     }
 
     override fun onDisconnected(reason: String) {
@@ -175,7 +175,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     }
 
     private fun loadLines(): List<Line> =
-        prefs.getString("lines", null)?.let { Json.decodeFromString<List<Line>>(it) } ?: emptyList()
+        prefs.getString("lines", null)?.let { Json.decodeFromString<List<Line>>(it).withoutNotes() } ?: emptyList()
 
     private companion object {
         const val TAG = "Whatcha"

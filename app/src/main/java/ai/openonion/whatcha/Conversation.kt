@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 enum class Delivery { QUEUED, SENT, DONE, FAILED }
 
 /**
- * A `note` is a grey line from the app itself, centred like WeChat's system messages; nobody said it.
  * A `voice` line is a recording kept in the app's files: its path, and how many seconds it lasts.
+ * `note` is only read from histories saved before round 5, which stored the failure note as a line of its own;
+ * the Json config fails on unknown keys, so the field stays and `withoutNotes` drops those lines on load.
  */
 @Serializable
 data class Line(
@@ -19,6 +20,8 @@ data class Line(
     val voice: String? = null,
     val seconds: Int = 0,
 )
+
+fun List<Line>.withoutNotes(): List<Line> = filterNot { it.note }
 
 // Plain words, no error code, and no promise the app cannot keep.
 const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下消息旁边红色的感叹号，再发一次。"
@@ -39,14 +42,14 @@ fun List<Line>.markSent(line: Line): List<Line> =
     map { if (it === line) it.copy(delivery = Delivery.SENT) else it }
 
 /**
- * The agent failed on the oldest waiting message: mark it, as WeChat's red !, and say so in a grey note.
+ * The agent failed on the oldest waiting message: mark it, as WeChat's red !. The screen says so under the
+ * bubble for as long as the mark is there, so nothing is stored beyond the delivery state.
  * The relay sends empty ERRORs every few seconds while the host is down; those are not failures.
  */
-fun List<Line>.failOldest(message: String, at: Long): List<Line> {
+fun List<Line>.failOldest(message: String): List<Line> {
     val i = indexOfFirst { it.delivery == Delivery.SENT }
     if (message.isEmpty() || i < 0) return this
-    val failed = toMutableList().apply { this[i] = this[i].copy(delivery = Delivery.FAILED) }
-    return failed + Line(fromParent = false, text = AGENT_FAILED, at = at, note = true)
+    return toMutableList().apply { this[i] = this[i].copy(delivery = Delivery.FAILED) }
 }
 
 /** The parent tapped the red mark: that one message goes back in the queue, in its place. */

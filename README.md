@@ -24,7 +24,7 @@ What works today:
 - **An empty chat says what to do:** 「想知道孩子在干嘛，就在下面问小乐，打字说话都行」.
 - **Hold to talk.** As in WeChat, the round button left of the box switches to 按住 说话. Letting go sends the recording as it is; the agent turns it into words when it arrives. A press under a second is dropped with 说话时间太短. Tapping a voice message plays it.
 - **No message is lost.** A message written while the link is down waits, with a small grey circle beside it while it is on its way, and goes out when the agent is back, including after the agent restarts. If the phone kills the app while a reply is on its way, the app picks the conversation up again on the next launch and the reply still arrives.
-- **Failures are said plainly.** If the agent fails, the message gets a red ! beside it and a grey line says so instead of leaving the parent waiting; a tap on the ! sends it again.
+- **Failures are said plainly.** If the agent fails, the message gets a red ! beside it and a grey line under it says so instead of leaving the parent waiting; a tap on the ! sends it again, and the line goes away once the message gets through.
 - **The latest line stays in view**, at any font size and with the keyboard open.
 - **Replies are read aloud.** Tapping a reply reads it again; tapping it while it is being read stops it.
 - **History is kept** on the phone, and 小乐 remembers the conversation on its side for 30 days, so it answers 「那他吃饭了吗」 as a follow-up instead of introducing itself again.

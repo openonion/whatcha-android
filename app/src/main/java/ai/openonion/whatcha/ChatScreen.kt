@@ -121,7 +121,7 @@ internal fun emptyHint(name: String, lines: List<Line>, status: Status): String?
 @Composable
 private fun EmptyHint(hint: String, modifier: Modifier) {
     Box(modifier.fillMaxWidth().padding(horizontal = 40.dp), contentAlignment = Alignment.Center) {
-        Text(hint, style = Body.copy(color = Color.Gray), textAlign = TextAlign.Center)
+        Text(hint, style = Body.copy(color = Color(0xFF666666)), textAlign = TextAlign.Center)
     }
 }
 
@@ -149,12 +149,12 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
             Column {
                 if (row.showTime) TimeLabel(row.line.at)
                 when {
-                    row.line.note -> Note(row.line.text)
                     row.line.voice != null -> Bubble(row.line, agentName, onTap = { onPlay(row.line.voice) }, onRetry = { onRetry(row.line) }) { VoiceContent(row.line) }
                     else -> Bubble(row.line, agentName, onTap = { onReplay(row.line.text) }.takeIf { !row.line.fromParent }, onRetry = { onRetry(row.line) }) {
                         Text(row.line.text, style = Body)
                     }
                 }
+                if (row.line.delivery == Delivery.FAILED) Note(AGENT_FAILED, Modifier.padding(top = 16.dp))
             }
         }
         item { Spacer(Modifier.size(4.dp)) }
@@ -168,8 +168,8 @@ internal fun newestFirst(lines: List<Line>): List<Row> =
     lines.indices.reversed().map { i -> Row(lines[i], i == 0 || lines[i].at - lines[i - 1].at > TimeGapMillis) }
 
 @Composable
-private fun Note(text: String) {
-    Text(text, style = Small, modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp), textAlign = TextAlign.Center)
+private fun Note(text: String, modifier: Modifier = Modifier) {
+    Text(text, style = Small, modifier = modifier.fillMaxWidth().padding(horizontal = 40.dp), textAlign = TextAlign.Center)
 }
 
 @Composable
