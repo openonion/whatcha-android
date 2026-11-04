@@ -263,7 +263,7 @@ private fun DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         when (delivery) {
-            Delivery.QUEUED, Delivery.SENT -> CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF666666), strokeWidth = 3.dp)
+            Delivery.QUEUED, Delivery.SENT -> CircularProgressIndicator(Modifier.size(with(LocalDensity.current) { 20.sp.toDp() }), color = Color(0xFF666666), strokeWidth = 3.dp)
             Delivery.FAILED -> RedBang()
             Delivery.DONE -> Unit
         }
