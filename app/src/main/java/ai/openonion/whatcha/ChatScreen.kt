@@ -228,7 +228,7 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry:
                 content()
             }
         }
-        if (mine) Tail(pointsLeft = false, color = ParentBubble)
+        if (mine) Tail(pointsLeft = false, color = if (line.photo != null) Color.Transparent else ParentBubble)
         if (mine) Avatar(R.drawable.avatar_parent, "我")
     }
 }
