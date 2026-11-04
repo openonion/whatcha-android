@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -35,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,7 +83,7 @@ fun ChatScreen(vm: ChatViewModel) {
             Header(headerTitle(title, lines), status)
             val hint = emptyHint(title, lines, status)
             if (hint != null) EmptyHint(hint, Modifier.weight(1f))
-            else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, modifier = Modifier.weight(1f))
+            else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onRetry = vm::retry, modifier = Modifier.weight(1f))
             if (status != Status.UNPAIRED) Composer(vm, voiceMode, recording)
         }
         if (recording) RecordingCard(Modifier.align(Alignment.Center))
@@ -135,7 +138,7 @@ private fun statusText(status: Status): String? = when (status) {
 }
 
 @Composable
-private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, onPlay: (String) -> Unit, modifier: Modifier) {
+private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, onPlay: (String) -> Unit, onRetry: (Line) -> Unit, modifier: Modifier) {
     // Laid out from the bottom, as WeChat is: the end of the latest line stays in view when it is long,
     // when a new one arrives, and when the keyboard opens and the list gets shorter.
     LazyColumn(modifier.fillMaxWidth(), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -147,8 +150,8 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
                 if (row.showTime) TimeLabel(row.line.at)
                 when {
                     row.line.note -> Note(row.line.text)
-                    row.line.voice != null -> Bubble(row.line, agentName, onTap = { onPlay(row.line.voice) }) { VoiceContent(row.line) }
-                    else -> Bubble(row.line, agentName, onTap = { onReplay(row.line.text) }.takeIf { !row.line.fromParent }) {
+                    row.line.voice != null -> Bubble(row.line, agentName, onTap = { onPlay(row.line.voice) }, onRetry = { onRetry(row.line) }) { VoiceContent(row.line) }
+                    else -> Bubble(row.line, agentName, onTap = { onReplay(row.line.text) }.takeIf { !row.line.fromParent }, onRetry = { onRetry(row.line) }) {
                         Text(row.line.text, style = Body)
                     }
                 }
@@ -191,7 +194,7 @@ internal fun timeLabel(at: Long, now: Long): String {
 }
 
 @Composable
-private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, content: @Composable () -> Unit) {
+private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry: () -> Unit, content: @Composable () -> Unit) {
     val mine = line.fromParent
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -199,6 +202,9 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, content:
     ) {
         if (!mine) Avatar(R.drawable.avatar_agent, agentName)
         if (!mine) Tail(pointsLeft = true, color = Color.White)
+        // WeChat puts the sending mark on the outer side of the parent's own bubble.
+        if (mine) DeliveryMark(line.delivery, onRetry)
+        if (mine) Spacer(Modifier.width(8.dp))
         // Tapping one of the agent's bubbles reads it aloud again, or stops it while it is being read;
         // tapping a voice message plays it.
         Box(
@@ -212,6 +218,24 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, content:
         }
         if (mine) Tail(pointsLeft = false, color = ParentBubble)
         if (mine) Avatar(R.drawable.avatar_parent, "我")
+    }
+}
+
+// WeChat's marks beside a message of your own: a grey circle while it is on its way, a red ! to tap and
+// resend when it failed. The 48dp box stays, empty, once it is DONE, so a long bubble never changes width.
+@Composable
+private fun RowScope.DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
+    Box(
+        Modifier.size(48.dp).align(Alignment.CenterVertically).clickable(enabled = delivery == Delivery.FAILED) { onRetry() },
+        contentAlignment = Alignment.Center,
+    ) {
+        when (delivery) {
+            Delivery.QUEUED, Delivery.SENT -> CircularProgressIndicator(Modifier.size(20.dp), color = Color(0xFF999999), strokeWidth = 2.dp)
+            Delivery.FAILED -> Box(Modifier.size(20.dp).background(Color(0xFFFA5151), CircleShape), contentAlignment = Alignment.Center) {
+                Text("!", style = TextStyle(fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Bold))
+            }
+            Delivery.DONE -> Unit
+        }
     }
 }
 

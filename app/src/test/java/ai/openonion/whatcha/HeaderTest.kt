@@ -17,4 +17,9 @@ class HeaderTest {
         assertEquals("小乐", headerTitle("小乐", listOf(asked(Delivery.QUEUED))))
         assertEquals("小乐", headerTitle("小乐", emptyList()))
     }
+
+    @Test
+    fun aFailedMessageIsNotBeingAnswered() {
+        assertEquals("小乐", headerTitle("小乐", listOf(asked(Delivery.FAILED))))
+    }
 }

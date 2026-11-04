@@ -41,4 +41,11 @@ class OutboxTest {
         val lines = listOf(asked("a", Delivery.SENT))
         assertEquals(listOf(Delivery.QUEUED), lines.afterReconnect(agentRunning = false).map { it.delivery })
     }
+
+    @Test
+    fun aReconnectLeavesFailedMessagesForTheParent() {
+        val lines = listOf(asked("a", Delivery.FAILED), asked("b", Delivery.SENT))
+        assertEquals(listOf(Delivery.FAILED, Delivery.QUEUED), lines.requeueSent().map { it.delivery })
+        assertEquals(listOf(Delivery.FAILED, Delivery.QUEUED), lines.afterReconnect(agentRunning = false).map { it.delivery })
+    }
 }

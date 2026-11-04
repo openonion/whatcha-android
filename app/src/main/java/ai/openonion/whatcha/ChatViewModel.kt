@@ -34,7 +34,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
 
-    private val _title = MutableStateFlow(prefs.getString("title", null) ?: "在干嘛")
+    private val _title = MutableStateFlow(prefs.getString("title", null) ?: "小乐")
     val title: StateFlow<String> = _title
 
     private val _status = MutableStateFlow(if (link == null) Status.UNPAIRED else Status.CONNECTING)
@@ -78,6 +78,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
             ?: return Toast.makeText(getApplication(), "说话时间太短", Toast.LENGTH_SHORT).show()
         queue(Line(fromParent = true, text = voicePrompt(seconds), at = System.currentTimeMillis(),
             delivery = Delivery.QUEUED, voice = file.path, seconds = seconds))
+    }
+
+    /** A tap on the red mark beside a failed message sends that same message, or recording, once more. */
+    fun retry(line: Line) {
+        save(_lines.value.retry(line))
+        if (_status.value == Status.ONLINE) sendQueued()
     }
 
     fun playVoice(path: String) {

@@ -9,7 +9,7 @@ class AgentErrorTest {
     @Test
     fun anErrorEndsTheWaitWithAPlainNote() {
         val lines = waiting.failOldest("credit exhausted", at = 1)
-        assertEquals(Delivery.DONE, lines.first().delivery)
+        assertEquals(Delivery.FAILED, lines.first().delivery)
         assertEquals(Line(fromParent = false, text = AGENT_FAILED, at = 1, note = true), lines.last())
     }
 

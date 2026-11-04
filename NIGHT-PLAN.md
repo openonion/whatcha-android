@@ -9,7 +9,7 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
 | # | Problem | Status |
 |---|---|---|
 | 1 | A message sent while the link is down is lost | **done** |
-| 2 | No sign that a message is sending or failed to send | open |
+| 2 | No sign that a message is sending or failed to send | **done** |
 | 3 | Nothing shows that 小乐 is replying | **done** |
 | 4 | No app icon: the home screen shows Android's default robot | **done** |
 | 5 | An agent error is swallowed: the parent waits forever | **done** |
@@ -54,6 +54,14 @@ Evidence marked *seen* comes from the emulator run on 2026-11-03 21:48–21:55; 
   header says 「暂时联系不上」 while the link is down, and a failed run ends in a grey note. So no red !
   to tap is needed; what is left is a grey spinner beside a message still in the queue.
 - **Verify.** Unit test on the state; screenshot with the host stopped.
+- **Done 2026-11-04 23:50 (ship-plan round 3).** The designer's pass showed a queued message looks exactly like
+  a sent one, so the red ! came back after all: `Delivery.FAILED`, an ERROR marks the oldest waiting message
+  FAILED instead of DONE (only the parent's tap resends it; reconnects leave it alone), and the note now reads
+  「点一下红色的感叹号再发一次」. `DeliveryMark` sits on the outer side of the parent's bubble as in WeChat:
+  grey spinner while QUEUED/SENT, red circled ! on FAILED, in a 48dp box that stays so the bubble never jumps.
+  Red first: `AgentErrorTest.anErrorEndsTheWaitWithAPlainNote` and `RetryTest.tappingTheRedMarkQueuesTheMessageAgainInPlace`.
+  Emulator, text and voice: `screenshots/sending-queued.png`, `sending-done.png`, `sending-failed.png`,
+  `sending-retried.png`, `sending-failed-voice.png`, `sending-retried-voice.png`.
 
 ## 3. Nothing shows that 小乐 is replying
 
