@@ -27,7 +27,7 @@ What works today:
 - **Failures are said plainly.** If the agent fails, a grey line says so instead of leaving the parent waiting.
 - **The latest line stays in view**, at any font size and with the keyboard open.
 - **Replies are read aloud.** Tapping a reply reads it again; tapping it while it is being read stops it.
-- **History is kept** on the phone.
+- **History is kept** on the phone, and 小乐 remembers the conversation on its side for 30 days, so it answers 「那他吃饭了吗」 as a follow-up instead of introducing itself again.
 
 ## How it works
 

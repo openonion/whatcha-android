@@ -54,6 +54,16 @@ cases:
         - "English words other than AI, Markdown or a list"
         - "Anything the notebook does not say, such as meals or sleep"
 
+  - id: empty-after-days
+    kind: normal
+    given: "The chat has no earlier lines: days passed since the parents last wrote and the old conversation expired"
+    input: "他今天忙什么"
+    expect:
+      must:
+        - "The reply says what the notebook records the child doing, from a tool result"
+        - "The reply says who it is once, in a single short sentence, not the full introduction"
+      must_not: ["The reply introduces itself twice or spends more than one sentence on who it is"]
+
   - id: good-news
     kind: normal
     input: "他最近有什么好事"
