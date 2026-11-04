@@ -50,6 +50,18 @@ class WireTest {
     }
 
     @Test
+    fun aPhotoTravelsAsAnImageTheAgentCanSee() {
+        val jpeg = byteArrayOf(-1, -40, -1, -32)
+        val frame = Json.parseToJsonElement(wire.input("[照片]", photo = jpeg)).jsonObject
+        val payload = frame["payload"]!!.jsonObject
+        val image = payload["images"]!!.jsonArray.single().jsonPrimitive.content
+        assertEquals("data:image/jpeg;base64,", image.substringBefore(",") + ",")
+        assertArrayEquals(jpeg, Base64.getDecoder().decode(image.substringAfter(",")))
+        assertFalse("files" in payload)
+        assertTrue(verifies(canonical(payload), frame["signature"]!!.jsonPrimitive.content))
+    }
+
+    @Test
     fun aTypedMessageCarriesNoFiles() {
         val payload = Json.parseToJsonElement(wire.input("吃了吗")).jsonObject["payload"]!!.jsonObject
         assertFalse("files" in payload)

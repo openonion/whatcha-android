@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WeChat's ⊕ at the right of the box: a circle with a plus in it, here it opens the album. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp" android:height="36dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="#181818" android:strokeWidth="1.5" android:fillColor="#00000000"
+        android:pathData="M12,2.75a9.25,9.25 0,1 0,0.01 0z" />
+    <path android:strokeColor="#181818" android:strokeWidth="1.8" android:fillColor="#00000000"
+        android:pathData="M12,7v10M7,12h10" />
+</vector>

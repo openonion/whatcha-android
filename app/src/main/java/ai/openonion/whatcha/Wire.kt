@@ -38,12 +38,14 @@ class Wire(private val me: Identity, private val agent: String, private val now:
         }.toString()
     }
 
-    fun input(prompt: String, voice: Voice? = null): String = command(buildJsonObject {
+    fun input(prompt: String, voice: Voice? = null, photo: ByteArray? = null): String = command(buildJsonObject {
         put("type", "INPUT")
         put("input_id", UUID.randomUUID().toString())
         put("prompt", prompt)
         // The host saves each file under .co/uploads/ and tells the agent its path.
         if (voice != null) put("files", buildJsonArray { add(voice.file()) })
+        // An image goes into the agent's own eyes: the host puts it beside the prompt in the same message.
+        if (photo != null) put("images", buildJsonArray { add("data:image/jpeg;base64," + Base64.getEncoder().encodeToString(photo)) })
     })
 
     fun onboard(inviteCode: String): String {

@@ -1,6 +1,6 @@
-# What a parent can actually do in the app: type, hold to talk, and tap a reply to hear it again.
+# What a parent can actually do in the app: type, hold to talk, send a photo from the album, and tap a reply to hear it again.
 # 小乐 must never send them looking for a button or a call that does not exist.
-# Voice messages carry an audio file, which this format cannot attach; check those by sending one for real.
+# Voice messages carry an audio file and photos carry an image, which this format cannot attach; check those by sending one for real.
 name: xiaole
 cases:
   - id: garbled-message

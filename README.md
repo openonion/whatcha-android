@@ -23,6 +23,7 @@ What works today:
 - **An icon parents can find.** A white chat bubble on WeChat green.
 - **An empty chat says what to do:** 「想知道孩子在干嘛，就在下面问小乐，打字说话都行」.
 - **Hold to talk.** As in WeChat, the round button left of the box switches to 按住 说话. Letting go sends the recording as it is; the agent turns it into words when it arrives. A press under a second is dropped with 说话时间太短. Tapping a voice message plays it.
+- **A photo from the album.** The ⊕ at the right of the box, where WeChat's is, opens the album; the picture is shrunk on the phone (longest side 1280px) and goes out as the parent's own picture bubble, with the same grey circle and red ! as text. 小乐 sees the picture itself and says what is in it. No new permission; the camera is next.
 - **No message is lost.** A message written while the link is down waits, with a small grey circle beside it while it is on its way, and goes out when the agent is back, including after the agent restarts. If the phone kills the app while a reply is on its way, the app picks the conversation up again on the next launch and the reply still arrives.
 - **Failures are said plainly.** If the agent fails, the message gets a red ! beside it and a grey line under it says so instead of leaving the parent waiting; a tap on the ! sends it again, and the line goes away once the message gets through.
 - **The latest line stays in view**, at any font size and with the keyboard open.
@@ -57,7 +58,7 @@ To run 小乐 for one family, start to finish on the child's Mac, follow [RUNBOO
 |---|---|
 | 1 ✅ | Packed pairing, silent identity, invite onboarding, WeChat-style text chat, read aloud |
 | 2 ✅ | Hold-to-talk: the phone sends the recording, the agent transcribes it |
-| 2b | Photos from the parent's album or camera |
+| 2b | Photos: from the album ✅, from the camera next |
 | 3 | 小乐 sends good news on its own, without being asked |
 | 4 | The agent sets the avatar, text size and read-aloud the parent gets (the name already works) |
 | 5 | Remote care: the agent can take a screenshot, change settings, read logs and update the app |
@@ -72,7 +73,8 @@ The app is only the parents' end. What 小乐 says is decided by a skill on the 
 - leave money, health and relationships for the child to tell;
 - tell the child at once if the parents say something worrying;
 - turn a voice message into words before answering it, and ask again if it holds no sound;
-- describe only what the app can do (type, hold to talk, tap a reply to hear it), never "I'll call you" or "here's a photo".
+- say warmly what it sees in a photo the parents send, and never that the child has seen it;
+- describe only what the app can do (type, hold to talk, send a photo from the album, tap a reply to hear it), never "I'll call you" or "here's a photo".
 
 For voice messages the agent needs a transcription tool: copy [`skills/xiaole/voice.py`](skills/xiaole/voice.py) next to your `agent.py` and pass `tools=[transcribe_voice]`. It needs `ffmpeg`. It checks for silence first, because given silence the transcription service makes up a sentence. Recordings are kept on the phone for 30 days, and the agent removes each upload once it has heard it.
 

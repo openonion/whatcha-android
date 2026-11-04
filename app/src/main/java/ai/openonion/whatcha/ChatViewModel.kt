@@ -1,6 +1,7 @@
 package ai.openonion.whatcha
 
 import android.app.Application
+import android.net.Uri
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.widget.Toast
@@ -81,7 +82,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
             delivery = Delivery.QUEUED, voice = file.path, seconds = seconds))
     }
 
-    /** A tap on the red mark beside a failed message sends that same message, or recording, once more. */
+    /** A picture picked from the album: shrunk first, because the host takes 10 MB and a phone photo can be more. */
+    fun sendPhoto(uri: Uri) {
+        val file = shrink(getApplication(), uri, System.currentTimeMillis())
+        queue(Line(fromParent = true, text = photoPrompt(), at = System.currentTimeMillis(), delivery = Delivery.QUEUED, photo = file.path))
+    }
+
+    /** A tap on the red mark beside a failed message sends that same message, recording or picture, once more. */
     fun retry(line: Line) {
         save(_lines.value.retry(line))
         if (_status.value == Status.ONLINE) sendQueued()
@@ -103,7 +110,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private fun sendQueued() {
         for (line in _lines.value.queued()) {
             val sound = line.voice?.let { File(it) }?.let { Voice(it.name, it.readBytes()) }
-            if (!link!!.send(line.text, sound)) return
+            val picture = line.photo?.let { File(it).readBytes() }
+            if (!link!!.send(line.text, sound, picture)) return
             save(_lines.value.markSent(line))
         }
     }

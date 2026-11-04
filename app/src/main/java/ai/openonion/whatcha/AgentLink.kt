@@ -39,7 +39,7 @@ class AgentLink(
     }
 
     /** False when there is no open socket; the caller keeps the message and retries after reconnecting. */
-    fun send(prompt: String, voice: Voice?): Boolean = socket?.send(wire.input(prompt, voice)) ?: false
+    fun send(prompt: String, voice: Voice?, photo: ByteArray?): Boolean = socket?.send(wire.input(prompt, voice, photo)) ?: false
 
     override fun onOpen(webSocket: WebSocket, response: Response) {
         webSocket.send(wire.connect(sessionId))

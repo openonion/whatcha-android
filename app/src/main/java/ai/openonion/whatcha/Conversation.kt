@@ -7,6 +7,7 @@ enum class Delivery { QUEUED, SENT, DONE, FAILED }
 
 /**
  * A `voice` line is a recording kept in the app's files: its path, and how many seconds it lasts.
+ * A `photo` line is the shrunk copy of a picture from the album, kept the same way; it is what was sent.
  * `note` is only read from histories saved before round 5, which stored the failure note as a line of its own;
  * the Json config fails on unknown keys, so the field stays and `withoutNotes` drops those lines on load.
  */
@@ -19,6 +20,7 @@ data class Line(
     val note: Boolean = false,
     val voice: String? = null,
     val seconds: Int = 0,
+    val photo: String? = null,
 )
 
 fun List<Line>.withoutNotes(): List<Line> = filterNot { it.note }

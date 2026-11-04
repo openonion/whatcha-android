@@ -3,6 +3,7 @@ package ai.openonion.whatcha
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -43,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -153,6 +156,7 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
                 if (row.showTime) TimeLabel(row.line.at)
                 when {
                     row.line.voice != null -> Bubble(row.line, agentName, onTap = { onPlay(row.line.voice) }, onRetry = { onRetry(row.line) }) { VoiceContent(row.line) }
+                    row.line.photo != null -> Bubble(row.line, agentName, onTap = null, onRetry = { onRetry(row.line) }) { PhotoContent(row.line.photo) }
                     else -> Bubble(row.line, agentName, onTap = { onReplay(row.line.text) }.takeIf { !row.line.fromParent }, onRetry = { onRetry(row.line) }) {
                         Text(row.line.text, style = Body)
                     }
@@ -219,7 +223,7 @@ private fun Bubble(line: Line, agentName: String, onTap: (() -> Unit)?, onRetry:
                     .widthIn(max = 270.dp)
                     .background(if (mine) ParentBubble else Color.White, RoundedCornerShape(6.dp))
                     .clickable(enabled = onTap != null) { onTap!!() }
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .then(if (line.photo != null) Modifier else Modifier.padding(horizontal = 14.dp, vertical = 12.dp))
             ) {
                 content()
             }
@@ -247,6 +251,13 @@ private fun DeliveryMark(delivery: Delivery, onRetry: () -> Unit) {
             Delivery.DONE -> Unit
         }
     }
+}
+
+// WeChat's picture bubble: the photo itself, no frame, up to 200dp, the same rounded corners as the other bubbles.
+@Composable
+private fun PhotoContent(path: String) {
+    val bitmap = remember(path) { thumbnail(path).asImageBitmap() }
+    Image(bitmap, contentDescription = "照片", modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp).clip(RoundedCornerShape(6.dp)))
 }
 
 // WeChat's voice bubble: its length in seconds, and a sound wave pointing at the speaker.
@@ -280,12 +291,14 @@ private fun Avatar(@DrawableRes picture: Int, who: String) {
     )
 }
 
-// WeChat's bottom bar: a switch between talking and typing, then either the hold-to-talk bar or a white box
-// with a green 发送 that appears only once there is something to send.
+// WeChat's bottom bar: a switch between talking and typing, then either the hold-to-talk bar or a white box,
+// then ⊕ for a photo from the album, which gives way to a green 发送 once there is something typed to send.
 @Composable
 private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) {
     val context = LocalContext.current
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) vm.setVoiceMode(true) }
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.sendPhoto(uri) }
+    var draft by remember { mutableStateOf("") }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
     Row(
         Modifier.fillMaxWidth().background(BarBackground).padding(horizontal = 12.dp, vertical = 10.dp),
@@ -306,7 +319,27 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
         }
         Spacer(Modifier.width(8.dp))
         if (voiceMode) HoldToTalk(recording, onPress = vm::startRecording, onRelease = vm::stopRecording, modifier = Modifier.weight(1f))
-        else TypeBox(onSend = vm::send, modifier = Modifier.weight(1f))
+        else TypeBox(draft, onChange = { draft = it }, modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
+        if (voiceMode || draft.isBlank()) PickPhoto { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+        else SendButton { vm.send(draft); draft = "" }
+    }
+}
+
+@Composable
+private fun PickPhoto(onTap: () -> Unit) {
+    Box(Modifier.size(TargetSize).clickable { onTap() }, contentAlignment = Alignment.Center) {
+        Image(painterResource(R.drawable.ic_plus), contentDescription = "发照片", modifier = Modifier.size(40.dp))
+    }
+}
+
+@Composable
+private fun SendButton(onTap: () -> Unit) {
+    Box(
+        Modifier.heightIn(min = TargetSize).widthIn(min = 88.dp).background(Green, RoundedCornerShape(6.dp)).clickable { onTap() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("发送", style = Body.copy(color = Color.White))
     }
 }
 
@@ -324,32 +357,15 @@ private fun HoldToTalk(recording: Boolean, onPress: () -> Unit, onRelease: () ->
 }
 
 @Composable
-private fun TypeBox(onSend: (String) -> Unit, modifier: Modifier) {
-    var draft by remember { mutableStateOf("") }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        BasicTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            textStyle = Body,
-            cursorBrush = SolidColor(Green),
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = TargetSize)
-                .background(Color.White, RoundedCornerShape(6.dp))
-                .padding(horizontal = 12.dp, vertical = 13.dp),
-        )
-        if (draft.isNotBlank()) {
-            Spacer(Modifier.width(10.dp))
-            Box(
-                Modifier
-                    .heightIn(min = TargetSize)
-                    .widthIn(min = 88.dp)
-                    .background(Green, RoundedCornerShape(6.dp))
-                    .clickable { onSend(draft); draft = "" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("发送", style = Body.copy(color = Color.White))
-            }
-        }
-    }
+private fun TypeBox(draft: String, onChange: (String) -> Unit, modifier: Modifier) {
+    BasicTextField(
+        value = draft,
+        onValueChange = onChange,
+        textStyle = Body,
+        cursorBrush = SolidColor(Green),
+        modifier = modifier
+            .heightIn(min = TargetSize)
+            .background(Color.White, RoundedCornerShape(6.dp))
+            .padding(horizontal = 12.dp, vertical = 13.dp),
+    )
 }
