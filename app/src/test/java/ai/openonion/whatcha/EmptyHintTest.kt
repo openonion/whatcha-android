@@ -16,7 +16,12 @@ class EmptyHintTest {
     }
 
     @Test
-    fun noHintWhenThereIsNothingToTypeInto() {
-        assertNull(emptyHint("小乐", emptyList(), Status.UNPAIRED))
+    fun anUnpairedEmptyChatTellsTheParentToCallTheChild() {
+        assertEquals("给孩子打个电话", emptyHint("小乐", emptyList(), Status.UNPAIRED))
+    }
+
+    @Test
+    fun anUnpairedChatWithHistoryShowsTheHistoryAndNoHint() {
+        assertNull(emptyHint("小乐", listOf(Line(fromParent = true, text = "在干嘛", at = 0)), Status.UNPAIRED))
     }
 }

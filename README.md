@@ -26,7 +26,7 @@ What works today:
 - **A photo from the album.** The ⊕ at the right of the box, where WeChat's is, opens the album; the picture is shrunk on the phone (longest side 1280px) and goes out as the parent's own picture bubble, with the same grey circle and red ! as text. 小乐 sees the picture itself and says what is in it. No new permission; the camera is next.
 - **No message is lost.** A message written while the link is down waits, with a small grey circle beside it while it is on its way, and goes out when the agent is back, including after the agent restarts. If the phone kills the app while a reply is on its way, the app picks the conversation up again on the next launch and the reply still arrives.
 - **Failures are said plainly.** If the agent fails, the message gets a red ! beside it and a grey line under it says so instead of leaving the parent waiting; a tap on the ! sends it again, and the line goes away once the message gets through.
-- **The latest line stays in view**, at any font size and with the keyboard open.
+- **The latest line stays in view**, at any font size and with the keyboard open, and the chat jumps back to the bottom when the parent sends or 小乐 answers, however far up they had scrolled.
 - **Replies are read aloud.** Tapping a reply reads it again; tapping it while it is being read stops it.
 - **History is kept** on the phone, and 小乐 remembers the conversation on its side for 30 days, so it answers 「那他吃饭了吗」 as a follow-up instead of introducing itself again.
 

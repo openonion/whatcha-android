@@ -28,11 +28,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -134,8 +136,13 @@ private fun StatusStrip(text: String) {
 }
 
 // A blank grey page gives a parent no reason to type; say what this is for until the first message.
-internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? =
-    if (lines.isEmpty() && status != Status.UNPAIRED) "想知道孩子在干嘛，\n就在下面问$name，\n打字说话都行" else null
+// With no line yet the grey middle says what the parent does next: ask, or, while the Mac has not accepted
+// this phone's invite code, call the child. With history the history is the page (11d).
+internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? = when {
+    lines.isNotEmpty() -> null
+    status == Status.UNPAIRED -> "给孩子打个电话"
+    else -> "想知道孩子在干嘛，\n就在下面问$name，\n打字说话都行"
+}
 
 @Composable
 private fun EmptyHint(hint: String, modifier: Modifier) {
@@ -165,8 +172,12 @@ internal fun statusText(status: Status): String? = when (status) {
 @Composable
 private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, onPlay: (String) -> Unit, onRetry: (Line) -> Unit, modifier: Modifier) {
     // Laid out from the bottom, as WeChat is: the end of the latest line stays in view when it is long,
-    // when a new one arrives, and when the keyboard opens and the list gets shorter.
-    LazyColumn(modifier.fillMaxWidth(), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    // when a new one arrives, and when the keyboard opens and the list gets shorter. A new line jumps the
+    // list back to the bottom however far up the parent has scrolled: their own send, the reply they are
+    // waiting for, a failed note. Nothing arrives unasked here, so there is no 「新消息」 pill to learn.
+    val state = rememberLazyListState()
+    LaunchedEffect(lines.size) { state.scrollToItem(0) }
+    LazyColumn(modifier.fillMaxWidth(), state = state, reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(Modifier.size(4.dp)) }
         items(newestFirst(lines)) { row ->
             // One Column per row: in a reversed list, loose siblings are stacked bottom-up too,
@@ -391,6 +402,7 @@ private fun TypeBox(draft: String, onChange: (String) -> Unit, modifier: Modifie
         onValueChange = onChange,
         textStyle = Body,
         cursorBrush = SolidColor(Green),
+        maxLines = 4,
         modifier = modifier
             .heightIn(min = TargetSize)
             .background(Color.White, RoundedCornerShape(6.dp))
