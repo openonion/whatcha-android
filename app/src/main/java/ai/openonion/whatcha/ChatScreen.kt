@@ -1,8 +1,13 @@
 package ai.openonion.whatcha
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -356,7 +361,16 @@ private fun Avatar(@DrawableRes picture: Int, who: String) {
 @Composable
 private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) {
     val context = LocalContext.current
-    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> if (granted) vm.setVoiceMode(true) }
+    val activity = context as Activity
+    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val canAskAgain = activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
+        when (afterMicAnswer(granted, canAskAgain)) {
+            MicStep.TALK -> vm.setVoiceMode(true)
+            MicStep.ASK_AGAIN -> Toast.makeText(context, MIC_ASK_AGAIN, Toast.LENGTH_SHORT).show()
+            MicStep.OPEN_SETTINGS -> openAppSettings(activity)
+        }
+    }
+    val micAllowed = { context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED }
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.sendPhoto(uri) }
     var draft by rememberSaveable { mutableStateOf("") }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
@@ -366,8 +380,7 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
     ) {
         Box(
             Modifier.size(TargetSize).clickable {
-                val micAllowed = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                if (voiceMode || micAllowed) vm.setVoiceMode(!voiceMode) else askMic.launch(Manifest.permission.RECORD_AUDIO)
+                if (voiceMode || micAllowed()) vm.setVoiceMode(!voiceMode) else askMic.launch(Manifest.permission.RECORD_AUDIO)
             },
             contentAlignment = Alignment.Center,
         ) {
@@ -378,12 +391,22 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
             )
         }
         Spacer(Modifier.width(8.dp))
-        if (voiceMode) HoldToTalk(recording, onPress = vm::startRecording, onRelease = vm::stopRecording, modifier = Modifier.weight(1f))
+        if (voiceMode) HoldToTalk(
+            recording,
+            // The permission can go between launches (a one-time grant, the phone's own cleanup): ask, never record without it.
+            onPress = { if (micAllowed()) vm.startRecording() else askMic.launch(Manifest.permission.RECORD_AUDIO) },
+            onRelease = vm::stopRecording, modifier = Modifier.weight(1f))
         else TypeBox(draft, onChange = { draft = it }, modifier = Modifier.weight(1f))
         Spacer(Modifier.width(8.dp))
         if (voiceMode || draft.isBlank()) PickPhoto { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
         else SendButton { vm.send(draft); draft = "" }
     }
+}
+
+/** The phone's own page for this app, where 权限 → 麦克风 is switched back on. */
+private fun openAppSettings(activity: Activity) {
+    Toast.makeText(activity, MIC_OPEN_SETTINGS, Toast.LENGTH_LONG).show()
+    activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null)))
 }
 
 @Composable

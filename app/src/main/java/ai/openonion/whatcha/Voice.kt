@@ -16,6 +16,21 @@ const val MAX_VOICE_SECONDS = 60
 /** WeChat drops a press too short to hold any words, rather than sending a blip. */
 internal fun worthSending(millis: Long): Boolean = millis >= 1_000
 
+enum class MicStep { TALK, ASK_AGAIN, OPEN_SETTINGS }
+
+const val MIC_ASK_AGAIN = "要允许用麦克风，才能按住说话"
+const val MIC_OPEN_SETTINGS = "点「权限」，把「麦克风」打开，再回来"
+
+/**
+ * What happens after the system's microphone question. [canAskAgain] is shouldShowRequestPermissionRationale,
+ * read in the answer: once it is false after a no, Android will not ask again and only the settings page helps.
+ */
+internal fun afterMicAnswer(granted: Boolean, canAskAgain: Boolean): MicStep = when {
+    granted -> MicStep.TALK
+    canAskAgain -> MicStep.ASK_AGAIN
+    else -> MicStep.OPEN_SETTINGS
+}
+
 internal fun voiceLabel(seconds: Int): String = "$seconds″"
 
 /** What the agent reads alongside the file; the host adds the file's path after it. */

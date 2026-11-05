@@ -64,4 +64,20 @@ class VoiceTest {
         val text = Line(fromParent = true, text = "吃了吗", at = now - 40 * day, delivery = Delivery.DONE)
         assertEquals(emptyList<String>(), listOf(text).staleVoices(now))
     }
+
+    @Test
+    fun allowingTheMicrophoneSwitchesToHoldToTalk() {
+        assertEquals(MicStep.TALK, afterMicAnswer(granted = true, canAskAgain = false))
+        assertEquals(MicStep.TALK, afterMicAnswer(granted = true, canAskAgain = true))
+    }
+
+    @Test
+    fun aFirstNoIsAskedAgainNextTime() {
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, canAskAgain = true))
+    }
+
+    @Test
+    fun aNoTheSystemWillNotAskAgainOpensTheSettingsPage() {
+        assertEquals(MicStep.OPEN_SETTINGS, afterMicAnswer(granted = false, canAskAgain = false))
+    }
 }
