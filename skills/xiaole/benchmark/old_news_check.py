@@ -11,3 +11,5 @@ print("2:", second)
 fact = first.partition("AI。")[2]
 assert second != fact, "told the same sentence as new twice"
 assert len(second) <= len(fact), f"the second telling is longer than the first: {len(second)} > {len(fact)}"
+assert "没新的" not in second, "handed the good thing back as scant"
+assert "还是" in second or "说的那个" in second, "did not say it as old"
