@@ -35,7 +35,7 @@ fun List<Line>.staleVoices(now: Long): List<String> =
     filter { it.voice != null && it.delivery == Delivery.DONE && it.at < now - VOICE_KEPT_MILLIS }.map { it.voice!! }
 
 // Plain words, no error code, and no promise the app cannot keep.
-const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下消息旁边红色的感叹号，再发一次。"
+const val AGENT_FAILED = "小乐这会儿出了点问题，没能回答。点一下红色的感叹号，再发一次。"
 
 /**
  * The one message to send now, or null. The host takes one INPUT per turn: a second one while a turn runs is

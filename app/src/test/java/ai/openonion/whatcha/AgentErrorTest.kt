@@ -25,6 +25,14 @@ class AgentErrorTest {
         assertEquals(answered, answered.failOldest("boom"))
     }
 
+    // 11 characters a line at the largest font (9g, measured at 2.0): 31 characters end on a whole 9-character line,
+    // the 35 with 「消息旁边」 left a lone 「次。」 on a fourth line.
+    @Test
+    fun theFailedNoteEndsOnAWholeLineAtTheLargestFont() {
+        assertEquals(31, AGENT_FAILED.length)
+        assertEquals(false, AGENT_FAILED.contains("消息旁边"))
+    }
+
     @Test
     fun anOldHistorysStoredNoteIsDroppedOnLoad() {
         val saved = """[{"fromParent":true,"text":"在干嘛","at":0,"delivery":"FAILED"},""" +

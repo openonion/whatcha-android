@@ -2,6 +2,8 @@ package ai.openonion.whatcha
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -86,17 +89,33 @@ fun ChatScreen(vm: ChatViewModel) {
     val status by vm.status.collectAsState()
     val voiceMode by vm.voiceMode.collectAsState()
     val recording by vm.recording.collectAsState()
+    var viewing by remember { mutableStateOf<String?>(null) }
 
-    Box(Modifier.fillMaxSize().background(ChatBackground).safeDrawingPadding().imePadding()) {
-        Column(Modifier.fillMaxSize()) {
-            Header(headerTitle(title, lines, status))
-            statusText(status)?.let { StatusStrip(it) }
-            val hint = emptyHint(title, lines, status)
-            if (hint != null) EmptyHint(hint, Modifier.weight(1f))
-            else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onRetry = vm::retry, modifier = Modifier.weight(1f))
-            if (status != Status.UNPAIRED) Composer(vm, voiceMode, recording)
+    Box(Modifier.fillMaxSize().background(ChatBackground)) {
+        Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
+            Column(Modifier.fillMaxSize()) {
+                Header(headerTitle(title, lines, status))
+                statusText(status)?.let { StatusStrip(it) }
+                val hint = emptyHint(title, lines, status)
+                if (hint != null) EmptyHint(hint, Modifier.weight(1f))
+                else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onView = { viewing = it }, onRetry = vm::retry, modifier = Modifier.weight(1f))
+                if (status != Status.UNPAIRED) Composer(vm, voiceMode, recording)
+            }
+            if (recording) RecordingCard(Modifier.align(Alignment.Center))
         }
-        if (recording) RecordingCard(Modifier.align(Alignment.Center))
+        // Outside the padded box so the black reaches every edge of the screen, as WeChat's viewer does.
+        viewing?.let { PhotoViewer(it, onClose = { viewing = null }) }
+    }
+}
+
+// WeChat's full-screen picture: the kept JPEG (at most 1280px, so decoded whole) on black, fitted; a tap anywhere
+// or Back brings the chat back exactly as it was. No zoom, no buttons: WeChat has none for closing either.
+@Composable
+private fun PhotoViewer(path: String, onClose: () -> Unit) {
+    BackHandler { onClose() }
+    val bitmap = remember(path) { BitmapFactory.decodeFile(path).asImageBitmap() }
+    Box(Modifier.fillMaxSize().background(Color.Black).clickable { onClose() }) {
+        Image(bitmap, contentDescription = "我发的照片，点一下关上", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
     }
 }
 
@@ -170,7 +189,7 @@ internal fun statusText(status: Status): String? = when (status) {
 }
 
 @Composable
-private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, onPlay: (String) -> Unit, onRetry: (Line) -> Unit, modifier: Modifier) {
+private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String) -> Unit, onPlay: (String) -> Unit, onView: (String) -> Unit, onRetry: (Line) -> Unit, modifier: Modifier) {
     // Laid out from the bottom, as WeChat is: the end of the latest line stays in view when it is long,
     // when a new one arrives, and when the keyboard opens and the list gets shorter. A new line jumps the
     // list back to the bottom however far up the parent has scrolled: their own send, the reply they are
@@ -186,7 +205,7 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
                 if (row.showTime) TimeLabel(row.line.at)
                 when {
                     row.line.voice != null -> Bubble(row.line, agentName, onTap = { onPlay(row.line.voice) }, onRetry = { onRetry(row.line) }) { VoiceContent(row.line) }
-                    row.line.photo != null -> Bubble(row.line, agentName, onTap = null, onRetry = { onRetry(row.line) }) { PhotoContent(row.line.photo) }
+                    row.line.photo != null -> Bubble(row.line, agentName, onTap = { onView(row.line.photo) }, onRetry = { onRetry(row.line) }) { PhotoContent(row.line.photo) }
                     else -> Bubble(row.line, agentName, onTap = { onReplay(row.line.text) }.takeIf { !row.line.fromParent }, onRetry = { onRetry(row.line) }) {
                         Text(row.line.text, style = Body)
                     }
@@ -296,7 +315,7 @@ private fun RedBang() {
 @Composable
 private fun PhotoContent(path: String) {
     val bitmap = remember(path) { thumbnail(path).asImageBitmap() }
-    Image(bitmap, contentDescription = "照片", modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp).clip(RoundedCornerShape(6.dp)))
+    Image(bitmap, contentDescription = "我发的照片", modifier = Modifier.sizeIn(maxWidth = 200.dp, maxHeight = 200.dp).clip(RoundedCornerShape(6.dp)))
 }
 
 // WeChat's voice bubble: its length in seconds, and a sound wave pointing at the speaker.
