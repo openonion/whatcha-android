@@ -27,7 +27,7 @@ cd family-agent
 co env get CO_INVITE_CODE || co env set CO_INVITE_CODE $(openssl rand -hex 6)
 co host --background
 curl -s localhost:8000/info                                # read "address" and check "name" is 小乐
-cd .. && ./gradlew :app:assembleDebug
+cd .. && git checkout v0.1.0 && ./gradlew :app:assembleDebug   # the newest tag: git tag --sort=-v:refname | head -1
 python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.apk \
   --agent <address from /info> --invite $(co env get CO_INVITE_CODE)
 ```
