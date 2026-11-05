@@ -1,7 +1,8 @@
-# Wen Qiu
+# Wen Qiu (文秋)
 
 ## Facts
 - Role: owner of a small shop, client of the Lantern project
+- Shop: 秋记小卖部
 - Project: projects/lantern.md
 - Contact: by chat, mornings
 

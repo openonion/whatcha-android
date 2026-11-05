@@ -2,7 +2,7 @@
 
 ## Facts
 - Type: shop inventory app
-- Client: Wen Qiu (people/wen-qiu.md)
+- Client: Wen Qiu 文秋, 秋记小卖部 (people/wen-qiu.md)
 - Started: 2026-09-15
 - Stack: Python, SQLite, a barcode scanner in the shop
 
@@ -14,7 +14,7 @@ morning count the shop compares with the shelves.
 - 2026-11-04: the stock-count bug after double-scanned returns is fixed; Wen Qiu tried it and said thanks.
 - Invoice for the October work, $4,200, is overdue; Wen Qiu has not paid yet.
 - Slept 4 hours before the fix, back pain from the chair all afternoon.
-- Argued with co-founder Lin about whether to keep taking shop clients.
+- Argued with co-founder Lin (林涛) about whether to keep taking shop clients.
 - Next: the morning count timing, before or after deliveries.
 
 ## Key decisions
