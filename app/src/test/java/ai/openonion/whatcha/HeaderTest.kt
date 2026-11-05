@@ -32,6 +32,12 @@ class HeaderTest {
         assertEquals("对方正在输入...", headerTitle("小乐", listOf(asked(Delivery.SENT)), Status.CONNECTING))
     }
 
+    // The strip under the title says 暂时联系不上; a title saying the other side is typing would contradict it.
+    @Test
+    fun nobodyIsTypingWhileTheMacCannotBeReached() {
+        assertEquals("小乐", headerTitle("小乐", listOf(asked(Delivery.SENT)), Status.OFFLINE))
+    }
+
     // Each clause on its own line: at the largest system font a status sentence wrapped mid-word (自己|重试, 重新|发一个安装包).
     @Test
     fun theOfflineSentenceBreaksAtItsComma() {
