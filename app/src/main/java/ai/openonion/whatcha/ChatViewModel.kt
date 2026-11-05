@@ -21,6 +21,10 @@ enum class Status { UNPAIRED, CONNECTING, ONLINE, OFFLINE }
 // Like a second tap on a WeChat voice message: tapping the reply being read stops it.
 internal fun tapStops(speaking: String?, tapped: String): Boolean = speaking == tapped
 
+// Each failed try waits twice as long as the last, up to a minute: a phone on mobile data all night, Mac asleep,
+// must not open a TLS connection every 5 s.
+internal fun nextDelay(previous: Long): Long = minOf(previous * 2, 60_000L)
+
 /** The one conversation on this phone. Keeps it on disk, reads replies aloud, reconnects on its own. */
 class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listener {
 
@@ -31,6 +35,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private var spoken: String? = null
     private val recorder = Recorder(app)
     private val player = Player()
+    private var reconnectDelay = RECONNECT_DELAY_MS
 
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
@@ -131,6 +136,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         Log.i(TAG, "connected session=$sessionId running=$running")
         prefs.edit().putString("session", sessionId).apply()
         save(_lines.value.afterReconnect(running))
+        reconnectDelay = RECONNECT_DELAY_MS
         _status.value = Status.ONLINE
         sendQueued()
     }
@@ -140,7 +146,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         save(_lines.value.requeueSent())
     }
 
-    // Still retried every 5 s by onDisconnected: a host whose code is corrected picks the phone up untouched.
+    // Still retried by onDisconnected, slower and slower: a host whose code is corrected picks the phone up untouched.
     override fun onRefused() = onMain {
         Log.w(TAG, "host refused this phone's invite code")
         _status.value = Status.UNPAIRED
@@ -165,12 +171,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         sendQueued()
     }
 
-    // Stays OFFLINE (or UNPAIRED) while retrying: the strip must not change every 5 s. onConnected sets ONLINE.
+    // Stays OFFLINE (or UNPAIRED) while retrying: the strip must not change on every try. onConnected sets ONLINE
+    // and puts the wait back to 5 s; 5, 10, 20, 40, 60, 60… s until then.
     override fun onDisconnected(reason: String) = onMain {
         Log.w(TAG, "disconnected: $reason")
         if (_status.value != Status.UNPAIRED) _status.value = Status.OFFLINE
         viewModelScope.launch {
-            delay(RECONNECT_DELAY_MS)
+            delay(reconnectDelay)
+            reconnectDelay = nextDelay(reconnectDelay)
             link?.open()
         }
     }
