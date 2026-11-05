@@ -70,7 +70,7 @@ The app is only the parents' end. What 小乐 says is decided by a skill on the 
 
 - say it is an AI, and never speak as the child;
 - tell only what really happened, and say "I'll ask" when it does not know;
-- leave money, health and relationships for the child to tell: one true work fact first, then that it is his to tell, said differently each time;
+- leave money, health, relationships and names for the child to tell: one true work fact first, then that it is his to tell, said differently each time;
 - say 你们 to the two parents, never 您, and open with one line, 「叔叔阿姨好，我是小乐，你儿子请的 AI。」, once;
 - tell the child at once if the parents say something worrying;
 - turn a voice message into words before answering it, and ask again if it holds no sound;
@@ -81,7 +81,7 @@ For voice messages the agent needs a transcription tool: copy [`skills/xiaole/vo
 
 For 「在干嘛」 the agent needs to read the child's notebook: copy [`skills/xiaole/rem.py`](skills/xiaole/rem.py) next to your `agent.py` and pass its three tools, `recent_sessions`, `show_page` and `search_notebook`. They read the `co rem` notebook (`~/.co/rem`, or `REM_ROOT`) and hand the pages to the agent as they are; the skill takes only the work from them and leaves money, health, relationships and names out.
 
-The skill has a benchmark, [`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml), with a fictional notebook in [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/) that mixes a finished bug fix with an overdue invoice, short sleep, an argument and the client's, shop's and co-founder's names in Chinese and English, so the traps are tested. Copy the yaml to your agent's `.co/benchmarks/` and run `co eval run xiaole --agent skills/xiaole/benchmark/agent.py` before and after you change the skill; `python skills/xiaole/benchmark/empty_check.py` checks the empty-notebook answer, `memory_check.py` the second turn, and `python skills/xiaole/benchmark/report_check.py <run>/report.json` reads the run's replies for trap words, 转告, 您 and 满意, length (median under 50, none over 65) and that the eight trap replies are not one sentence repeated.
+The skill has a benchmark, [`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml), with a fictional notebook in [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/) that mixes a finished bug fix with an overdue invoice, short sleep, an argument and the client's, shop's and co-founder's names in Chinese and English, so the traps are tested. Copy the yaml to your agent's `.co/benchmarks/` and run `co eval run xiaole --agent skills/xiaole/benchmark/agent.py` before and after you change the skill, with the Python `co` runs on (`co doctor` prints it as Python Path); `python skills/xiaole/benchmark/empty_check.py` checks the empty-notebook answer, `memory_check.py` the second turn, and `python skills/xiaole/benchmark/report_check.py <run>/report.json` reads the run's replies for trap words, 转告, 您 and 满意, length (median under 52, none over 65) and that no trap reply is given to two different questions.
 
 ## Design rules
 
