@@ -12,7 +12,7 @@ The app looks and works like a WeChat chat, because WeChat is the one app many p
 
 ## Status
 
-This is early work. The first milestone works end to end. It was last checked on 2026-11-04 on an Android emulator against a ConnectOnion 1.9.3rc35 agent through the public relay.
+This is early work. The first milestone works end to end. It was last checked on 2026-11-05 on an Android emulator against a ConnectOnion 1.9.3rc44 agent through the public relay.
 
 What works today:
 
