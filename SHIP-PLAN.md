@@ -271,3 +271,7 @@ PM chose 8e + 9g + the 「我发的照片」 half of 8j (round17-brief). Archite
 ### Round 24 · 00:36–00:46 Sydney, 2026-11-06
 
 Mac emulator still offline; Parrot headless API 30 used. Sprint lead wrote the brief (23c is a one-line fix, no PM step) and the code and test; one agent took the Parrot shots. Designer step skipped: the change removes a contradictory title, nothing new is drawn. Before: `parrot-23a-head-offline.png`; after: `parrot-23c-offline.png`, `parrot-23c-answered.png`.
+
+### Freeze · 01:37 Sydney, 2026-11-06
+
+The owner said on 11-05 19:42 he will send the APK to his father today. edc4bf3 is the release candidate: 66 tests green, whole flow proven on the Parrot API 30 emulator (rounds 23-24). No more app or skill changes until he has installed it; hourly ticks only check that the branch is unchanged. Open items (17a TalkBack, 21b wording, 22a INSTALL audience, 23b Huawei picker, 12b TTS, 8b camera) wait for his feedback from the real phone.
