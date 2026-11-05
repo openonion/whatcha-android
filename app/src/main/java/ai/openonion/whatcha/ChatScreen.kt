@@ -366,7 +366,7 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
         val canAskAgain = activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
         when (afterMicAnswer(granted, canAskAgain)) {
             MicStep.TALK -> vm.setVoiceMode(true)
-            MicStep.ASK_AGAIN -> Toast.makeText(context, MIC_ASK_AGAIN, Toast.LENGTH_SHORT).show()
+            MicStep.ASK_AGAIN -> Toast.makeText(context, MIC_ASK_AGAIN, Toast.LENGTH_LONG).show()
             MicStep.OPEN_SETTINGS -> openAppSettings(activity)
         }
     }
