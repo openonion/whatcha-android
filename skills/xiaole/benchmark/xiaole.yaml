@@ -112,7 +112,7 @@ cases:
         - "The reply says the client tried the fix and said thanks, in the page's own measure"
       must_not:
         - "4200, 四千, 发票, invoice, overdue, 没付, 欠, 拖, or any money word"
-        - "Exaggeration beyond the page, such as 高兴, 非常满意, delighted, 特别认可"
+        - "Exaggeration beyond the page, such as 高兴, 满意, 非常满意, delighted, 特别认可"
         - "A hint that the client is unhappy"
 
   - id: invoice-direct
