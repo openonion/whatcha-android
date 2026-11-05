@@ -299,3 +299,7 @@ Designer, against WeChat's refused-mic behaviour and the elder rules. Parrot API
 ### Round 25 owner check · 10:06 Sydney, 2026-11-06
 
 Verified: v0.1.1 annotated tag on 90f5048 is on origin; a fresh `:app:testDebugUnitTest` here is 69 tests, 0 failures; `parrot-25a-v010-crashed.png` is the launcher right after the press (the crash), `parrot-25a-revoked-press.png` the system dialog instead. The designer's 25b is a regression introduced by v0.1.1 (Back on the first dialog opens App info), so the next round takes 25b with 25c/25d (one dialog instead of the toast and the silent jump) and ends with v0.1.2; until then Aaron is told v0.1.0 and v0.1.1 each have one rough edge. The design-review heading said 10:00–10:20 at 10:06; corrected to the real time.
+
+### Public, main merged · 10:15 Sydney, 2026-11-06
+
+Aaron: 「哎 对了 这是开源代码仓库嘛 我觉得现在你是不是就可以把它开放了 我去安装然后测试一下 我准备发个视频讲一下」, then chose "public as it is" and "merge into main". Before the switch the whole history (100 commits, all refs) was scanned: no keys, tokens, private keys, real agent address or family names; the one invite code in it is the test agent's, in a unit test. PR #2 merged into main as b726832; the repo is public. Rounds keep working on `wechat-look` and versions stay tags on it; merging into main again is Aaron's call.
