@@ -176,7 +176,7 @@ private fun Conversation(lines: List<Line>, agentName: String, onReplay: (String
     // list back to the bottom however far up the parent has scrolled: their own send, the reply they are
     // waiting for, a failed note. Nothing arrives unasked here, so there is no 「新消息」 pill to learn.
     val state = rememberLazyListState()
-    LaunchedEffect(lines.size) { state.scrollToItem(0) }
+    LaunchedEffect(lines.size) { state.animateScrollToItem(0) }
     LazyColumn(modifier.fillMaxWidth(), state = state, reverseLayout = true, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(Modifier.size(4.dp)) }
         items(newestFirst(lines)) { row ->
