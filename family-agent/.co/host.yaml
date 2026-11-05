@@ -1,0 +1,6 @@
+name: 小乐
+entrypoint: agent.py
+trust: careful
+# Keep a conversation for 30 days. The default, 86400, forgets it after one quiet day,
+# and parents skip days; 小乐 would then introduce itself again.
+result_ttl: 2592000

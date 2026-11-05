@@ -4,8 +4,11 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.util.Base64
 import java.util.UUID
 
 /**
@@ -35,10 +38,14 @@ class Wire(private val me: Identity, private val agent: String, private val now:
         }.toString()
     }
 
-    fun input(prompt: String): String = command(buildJsonObject {
+    fun input(prompt: String, voice: Voice? = null, photo: ByteArray? = null): String = command(buildJsonObject {
         put("type", "INPUT")
         put("input_id", UUID.randomUUID().toString())
         put("prompt", prompt)
+        // The host saves each file under .co/uploads/ and tells the agent its path.
+        if (voice != null) put("files", buildJsonArray { add(voice.file()) })
+        // An image goes into the agent's own eyes: the host puts it beside the prompt in the same message.
+        if (photo != null) put("images", buildJsonArray { add("data:image/jpeg;base64," + Base64.getEncoder().encodeToString(photo)) })
     })
 
     fun onboard(inviteCode: String): String {
@@ -71,6 +78,14 @@ class Wire(private val me: Identity, private val agent: String, private val now:
     }
 
     private fun sign(payload: JsonObject): String = me.sign(canonical(payload).toByteArray())
+}
+
+/** A recorded voice message as the host takes a file: a name, and the bytes as a base64 data URL. */
+class Voice(val name: String, val sound: ByteArray) {
+    fun file(): JsonObject = buildJsonObject {
+        put("name", name)
+        put("data", "data:audio/mp4;base64," + Base64.getEncoder().encodeToString(sound))
+    }
 }
 
 fun canonical(element: JsonElement): String = sortKeys(element).toString()
