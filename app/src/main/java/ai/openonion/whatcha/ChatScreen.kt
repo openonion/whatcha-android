@@ -341,7 +341,7 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
     Row(
         Modifier.fillMaxWidth().background(BarBackground).padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Bottom,
     ) {
         Box(
             Modifier.size(TargetSize).clickable {
