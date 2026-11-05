@@ -5,7 +5,7 @@ Everything here runs on the child's Mac, from a checkout of this repo. The agent
 ## Prerequisites
 
 - `co` 1.9.3rc41 or newer (`co --version`; the `Invalid invite` log line the smoke test greps for is rc41), signed in: `co env get OPENONION_API_KEY` prints a value (the agent needs it before it reads any `.env`); `ffmpeg` on PATH; JDK 17 or newer and the Android SDK with API 36.
-- The Mac must not sleep: System Settings → Energy (or Battery → Options) → "Prevent automatic sleeping when the display is off" on, and keep the lid open or the Mac on power.
+- The Mac must not sleep: System Settings → Energy (or Battery → Options) → "Prevent automatic sleeping when the display is off" on, and keep the lid open and the Mac on power.
 - `co host --background` installs a LaunchAgent. LaunchAgents start at login, not at boot: after a reboot, log in once and 小乐 is back.
 
 ## Step 0: make sure this is the only agent on your address
@@ -13,13 +13,14 @@ Everything here runs on the child's Mac, from a checkout of this repo. The agent
 ```bash
 ls ~/Library/LaunchAgents | grep ai.connectonion.host     # must list nothing from other projects
 cat ~/.co/served_by.json                                   # if it exists, "project" must be this family-agent or absent
+# If it names another project and `lsof -i :8000` is empty, `rm ~/.co/served_by.json`; `co host --background` below writes it again.
 ```
 
 Another `co host` project on the same Mac without its own `.co/keys/` shares your address; two agents on one address answer each other's calls. Stop the other one (`co host --uninstall` in its directory) first.
 
 ## The six commands
 
-If the child is a daughter, first change 你儿子 to 你女儿 in `skills/xiaole/SKILL.md` (three places: the opening line, the no-repeat example and the good-news example); the agent reads the skill once at start, so do it before `co host`.
+If you are a daughter, first change 你儿子 to 你女儿 in `skills/xiaole/SKILL.md` (three places: the opening line, the no-repeat example and the good-news example); the agent reads the skill once at start, so do it before `co host`.
 
 ```bash
 cd family-agent
@@ -58,7 +59,7 @@ Both keep `.co/` (identity, conversations, logs).
 
 ## Saturday checklist
 
-1. Real-notebook spot check: run the agent once with the test key against the real `~/.co/rem`, read the reply, keep it local; never paste it anywhere.
+1. Real-notebook spot check: run the agent once with the test key against the real `~/.co/rem`, read the reply, keep it local; never paste it anywhere, and for any client, company or colleague name: 小乐 should say 一家公司 / 老板, never the name.
 2. Confirm the Huawei dialog wording in `INSTALL.zh-CN.md` on the phone. Open the app once and watch the title: 「小乐(连接中…)」, then 「小乐」, nothing red (if the strip says 还没连上 instead, the packed code is not the one in `~/.co/keys.env`: re-pack, or `co env set CO_INVITE_CODE` to the packed one and `co host --background`). Then set the phone's 字体 to its largest (设置 → 显示 → 字体大小与粗细) and look at: the composer in both modes (按住 说话 on one line, 发送 whole), the status strip (turn Wi-Fi off: 「暂时联系不上，」 then 「稍后会自己重试」 on their own lines), the recording card while holding the bar, and the spinner beside a message while it is on its way. The failed message (red ! a 感叹号, not a bar; its note three whole lines) is proven on the emulator only, `screenshots/sending-failed-2.0.png`: there is no safe way to make one on the real agent, so do not try. The emulator at `font_scale 2.0` passed all of these (`screenshots/*-2.0.png`); the Huawei at 超大 is the real check. Send one photo from the phone's album through the ⊕ (a Huawei has no Play services, so this is the system picker, never seen on the emulator): the picture bubble, the spinner, the reply about the picture, then tap the picture and see it full screen on black, tap again to come back. Then tap one reply and hear it read aloud; if it is silent, the phone has no Chinese voice: 设置 → 辅助功能 → 文本转语音, pick 华为语音引擎 and download 中文.
 3. Tap the round button once and 允许 the microphone during setup, so the parents never see the dialog.
 4. Reboot the Mac once, log in, and confirm `co host --status` says running.
