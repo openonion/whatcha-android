@@ -292,6 +292,10 @@ Rule from now on: a round that adds a feature, or that changes something we are 
 
 Architect, row 25a (round25-brief), Parrot headless API 30, no agent host (the permission path is local). Red before green: v0.1.0 crashed on the press with the mic revoked (premise 2 confirmed, not assumed); `VoiceTest.aFirstNoIsAskedAgainNextTime` and `VoiceTest.aNoTheSystemWillNotAskAgainOpensTheSettingsPage` failed against a stub (69 run, 2 failed), then 69/69 green with `assembleDebug`. Code: `Voice.kt` `MicStep` / `afterMicAnswer` and the two strings; `ChatScreen.kt` `Composer` only (permission callback, press guard, `openAppSettings`). Docs: INSTALL 第一次打开 mic bullet is now what to say on the call; README / README.zh-CN voice bullet; RUNBOOK Saturday 3 denies the mic once on the Huawei. Version v0.1.1 (versionCode 2), tagged. Cleanup: `ai.openonion.whatcha` uninstalled, temporary files off `/sdcard`, `font_scale` null, `adb emu kill`, `adb kill-server` on Parrot.
 
-### Round 25 design review · 10:00–10:20 Sydney, 2026-11-06
+### Round 25 design review · 09:57–10:06 Sydney, 2026-11-06
 
 Designer, against WeChat's refused-mic behaviour and the elder rules. Parrot API 30, v0.1.1 debug packed with a dummy agent (no host needed for the permission path). New finding first: Back or a tap outside the very first mic dialog sends the parent to App info (25b, `parrot-25b-back-opens-settings.png`). Rows 25b–25e. One-line change: the first-No toast is `LENGTH_LONG` (3.5 s) instead of SHORT (2 s); 14 characters at an elder's reading pace need more than 2 s. Cleanup on Parrot: app uninstalled, `/sdcard/u.xml` removed, `font_scale` null (untouched), `adb emu kill`, `adb kill-server`.
+
+### Round 25 owner check · 10:06 Sydney, 2026-11-06
+
+Verified: v0.1.1 annotated tag on 90f5048 is on origin; a fresh `:app:testDebugUnitTest` here is 69 tests, 0 failures; `parrot-25a-v010-crashed.png` is the launcher right after the press (the crash), `parrot-25a-revoked-press.png` the system dialog instead. The designer's 25b is a regression introduced by v0.1.1 (Back on the first dialog opens App info), so the next round takes 25b with 25c/25d (one dialog instead of the toast and the silent jump) and ends with v0.1.2; until then Aaron is told v0.1.0 and v0.1.1 each have one rough edge. The design-review heading said 10:00–10:20 at 10:06; corrected to the real time.
