@@ -14,4 +14,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent { ChatScreen(vm) }
     }
+
+    override fun onStart() {
+        super.onStart()
+        vm.cameBack()
+    }
 }

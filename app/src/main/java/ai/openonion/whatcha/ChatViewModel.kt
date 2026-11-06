@@ -8,6 +8,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,10 @@ internal fun tapStops(speaking: String?, tapped: String): Boolean = speaking == 
 // must not open a TLS connection every 5 s.
 internal fun nextDelay(previous: Long): Long = minOf(previous * 2, 60_000L)
 
+// Coming back to the screen skips the rest of a wait: the parent is looking now, and the wait may be a whole minute.
+// Only while a retry is waiting; a try already under way is left to finish, so there is never a second socket.
+internal fun retryNow(status: Status, waiting: Boolean): Boolean = waiting && status != Status.ONLINE
+
 /** The one conversation on this phone. Keeps it on disk, reads replies aloud, reconnects on its own. */
 class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listener {
 
@@ -38,6 +43,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val audio = app.getSystemService(AudioManager::class.java)
     private val player = Player()
     private var reconnectDelay = RECONNECT_DELAY_MS
+    private var retry: Job? = null
 
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
@@ -186,11 +192,19 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     override fun onDisconnected(reason: String) = onMain {
         Log.w(TAG, "disconnected: $reason")
         if (_status.value != Status.UNPAIRED) _status.value = Status.OFFLINE
-        viewModelScope.launch {
+        retry = viewModelScope.launch {
             delay(reconnectDelay)
             reconnectDelay = nextDelay(reconnectDelay)
             link?.open()
         }
+    }
+
+    /** The app is on the screen again. The wait is not reset: if this try fails too, the slow schedule carries on. */
+    fun cameBack() {
+        if (!retryNow(_status.value, retry?.isActive == true)) return
+        Log.i(TAG, "back on screen; retrying now")
+        retry?.cancel()
+        link?.open()
     }
 
     override fun onCleared() {
