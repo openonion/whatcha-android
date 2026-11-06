@@ -69,7 +69,7 @@
 app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill 决定：[`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md)。[`family-agent/agent.py`](family-agent/agent.py) 就地加载它和下面的工具；要给别的 agent 用，复制到那个 agent 的 `.co/skills/xiaole/` 即可。它要求 agent：
 
 - 直说自己是 AI，从不以子女的口吻说话；
-- 只讲真实发生的事，不知道就说「我帮你问问」；
+- 只讲真实发生的事，不知道就说「我跟他说一声」，让他自己告诉爸妈；
 - 钱、身体、感情、名字留给子女自己说：先说一件真实的工作上的事，再说这得他自己讲，每次说法不一样；
 - 对爸妈两个人说「你们」，从不说「您」；开场只说一句「叔叔阿姨好，我是小乐，你儿子请的 AI。」，说一次；
 - 爸妈说了让人担心的事，马上告诉子女（子女 Mac 上弹一条通知）；
@@ -83,7 +83,7 @@ app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill
 
 要兑现「我跟他说一声」，把 [`skills/xiaole/child.py`](skills/xiaole/child.py) 复制到 `agent.py` 旁边，传 `tell_child`：它在运行 host 的那台 Mac 上弹一条标题为小乐的 macOS 通知，内容是爸妈的话（开着专注模式时不弹横幅，只进通知中心），host 日志里的这次工具调用就是记录；`co eval` 不加 `--live` 时不弹。
 
-这个 skill 带一套测试：[`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml)，配一个虚构的笔记本 [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/)，里面把修好的 bug 和逾期发票、没睡够、吵架、客户和店和合伙人的中英文名字放在一起，专门测这些坑。把 yaml 复制到你 agent 的 `.co/benchmarks/`，改 skill 前后各跑一次 `co eval run xiaole --agent skills/xiaole/benchmark/agent.py`，用 `co` 自己跑在的那个 Python（`co doctor` 的 Python Path）；`python skills/xiaole/benchmark/empty_check.py` 查空笔记本时的回答，`memory_check.py` 查第二句不再自我介绍，`python skills/xiaole/benchmark/report_check.py <run>/report.json` 读整轮回复，查有没有踩坑的词、转告、您、满意，长度（中位数 52 以内，没有超过 65 的），以及没有哪条绕开的回答被拿来答两个不同的问题。
+这个 skill 带一套测试：[`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml)，配一个虚构的笔记本 [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/)，里面把修好的 bug 和逾期发票、没睡够、吵架、客户和店和合伙人的中英文名字放在一起，专门测这些坑。把 yaml 复制到你 agent 的 `.co/benchmarks/`，改 skill 前后各跑一次 `co eval run xiaole --agent skills/xiaole/benchmark/agent.py`，用 `co` 自己跑在的那个 Python（`co doctor` 的 Python Path）；`python skills/xiaole/benchmark/empty_check.py` 查空笔记本时的回答，`memory_check.py` 查后面几句不再自我介绍、不许诺回头再报，`python skills/xiaole/benchmark/report_check.py <run>/report.json` 读整轮回复，查有没有踩坑的词、转告、您、满意，长度（中位数 52 以内，没有超过 65 的），以及没有哪条绕开的回答被拿来答两个不同的问题。
 
 ## 设计规矩
 

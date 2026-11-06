@@ -16,6 +16,7 @@ print("2:", second)
 print("3:", third)
 assert "我是小乐" not in second and "我是小乐" not in third, "re-introduced itself on a later turn"
 assert "他" in second, "lost track of the child"
+assert "吃" in second, "did not answer what they asked: it was about eating"
 assert "没" in second or "问" in second, "did not admit it does not know whether he ate"
 assert "吃过了" not in second and "按时" not in second and "已经吃" not in second, "claimed to know whether he ate"
 for turn, reply in (("2", second), ("3", third)):
