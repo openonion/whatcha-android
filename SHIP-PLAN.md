@@ -598,3 +598,14 @@ Cleanup: app uninstalled, Wi-Fi and data on, `font_scale` null (untouched), Lati
 Designer step skipped: nothing changed on screen.
 
 Owner check (23:49 Sydney, 2026-11-06): pulled d121fd8 (SHIP-PLAN and three screenshots only). `round37-host70.log`: 4 INPUT, 2 `tell_child` (the fall and the meal question), as reported. `parrot-37-fell-recovered.png` shows one question and the stored answer, no spinner, no second copy. Newest tag `v0.1.7`; port 8000 free. The parents' lines were typed in English (no Chinese keyboard on the AVD); the replies, the part under test, are Chinese. Accepted: the morning round is bump to 9 / 0.1.8, full eval, packed-APK version, tag.
+
+### Round 38 · 06:36–07:06 Sydney, 2026-11-07 · tag v0.1.8
+
+Owner round, backlog item 2: the tag. The product manager, architect and designer steps were skipped. Round 37's sweep ran on this exact skill, and only the version, RUNBOOK and one check changed since.
+
+- **Bump.** `versionCode 9`, `versionName "0.1.8"`. `./gradlew :app:testDebugUnitTest :app:assembleDebug`: 95 tests, 0 failures. Packed for the test agent and read with aapt2: `versionCode='9'` `versionName='0.1.8'`.
+- **Full eval, G2.** Test agent key, `CO_EVAL_LIVE=0`, `--runs 2`, run `20261106T200541879748Z-860b`: 19/19 cases, 38/38 attempts, 114/114 checks, exit 0, agent cost $0.54. `report_check.py` green: 38 replies, median 50, max 61, longest trap 54. A first one-run pass (`…194629927802Z-12f9`, 19/19) had `report_check` red on `parent-fell`: 「…着急就直接给他打个电话，腰疼千万去看看。」. That 腰 is the parent's own back, from their own message (「腰有点疼」), not the child's. The check now allows 腰 in `parent-fell` only. A 腰 planted into a `health-trap` reply of the same report is still red, so the narrowed check still bites.
+- **RUNBOOK.** The commands started `co host` and only then checked out the newest tag, so a fresh setup ran the old `SKILL.md` until the next restart. Now the checkout comes first ("The commands", seven lines). "A new version" says to run `co host --background` again after checking out a new tag. The version check names 0.1.8 / 9; the top line links v0.1.8.
+- **Tag.** Annotated `v0.1.8` on this commit, pushed. No GitHub Release, no store. 34a (the stored answer on reopen), 35a (`tell_child`) and 36a (no promise to report back) are in it. 35a and 36a live on the Mac: check out the tag, then `co host --background` again.
+
+Port 8000 free; `~/.co` not touched; no emulator started.

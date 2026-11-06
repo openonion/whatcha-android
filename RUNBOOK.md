@@ -1,6 +1,6 @@
 # Runbook: run 小乐 for one family
 
-Read this file and INSTALL.zh-CN.md from the `wechat-look` branch, or from the tag you build: [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md), [v0.1.7](https://github.com/openonion/whatcha-android/blob/v0.1.7/RUNBOOK.md). `main` is older and builds v0.1.0.
+Read this file and INSTALL.zh-CN.md from the `wechat-look` branch, or from the tag you build: [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md), [v0.1.8](https://github.com/openonion/whatcha-android/blob/v0.1.8/RUNBOOK.md). `main` is older and builds v0.1.0.
 
 Everything here runs on the child's Mac, from a checkout of this repo. The agent is the `~/.co` identity of that Mac.
 
@@ -20,22 +20,23 @@ cat ~/.co/served_by.json                                   # if it exists, "proj
 
 Another `co host` project on the same Mac without its own `.co/keys/` shares your address; two agents on one address answer each other's calls. Stop the other one (`co host --uninstall` in its directory) first.
 
-## The six commands
+## The commands
 
 If you are a daughter, first change 你儿子 to 你女儿 in `skills/xiaole/SKILL.md` (three places: the opening line, the no-repeat example and the good-news example); the agent reads the skill once at start, so do it before `co host`.
 
 ```bash
+git fetch --tags && git checkout "$(git tag --sort=-v:refname | head -1)"   # the newest tag, before the host starts: 小乐 reads its skill once at start
 cd family-agent
 co env get CO_INVITE_CODE || co env set CO_INVITE_CODE $(openssl rand -hex 6)
 co host --background
 curl -s localhost:8000/info                                # read "address" and check "name" is 小乐
-cd .. && git fetch --tags && git checkout "$(git tag --sort=-v:refname | head -1)" && ./gradlew :app:assembleDebug   # the newest tag; `git describe --tags` names it
+cd .. && ./gradlew :app:assembleDebug                      # `git describe --tags` names the tag you build
 python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.apk \
   --agent <address from /info> --invite $(co env get CO_INVITE_CODE)
 "$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)"/aapt2 dump badging whatcha-family.apk | grep -o "version[CN][a-z]*='[^']*'"
 ```
 
-The last line reads the version from the packed APK itself, not from the checkout. It must print the tag's version, `versionName='0.1.7'` (and `versionCode='8'`) for v0.1.7. If it prints `0.1.0`, stop: you are on an old checkout.
+The last line reads the version from the packed APK itself, not from the checkout. It must print the tag's version, `versionName='0.1.8'` (and `versionCode='9'`) for v0.1.8. If it prints `0.1.0`, stop: you are on an old checkout.
 
 The invite code lives in `~/.co/keys.env`, not in `family-agent/.env`: `co host` 1.9.3rc40 hands the agent the code from `keys.env` before it reads the project's `.env`, so a code written only in `.env` is refused while `keys.env` has one. `co init` already wrote one there; the second half of that line only runs when it did not.
 
@@ -54,6 +55,7 @@ Parents far away: send `whatcha-family.apk` into your WeChat chat with them, and
 
 ## A new version, and the first week
 
+- A new tag changes 小乐 too: after `git checkout` of it, run `cd family-agent && co host --background` again before packing, or the host keeps the old skill.
 - A new version goes into the same WeChat chat and installs over the old one. Don't uninstall first: that deletes the chat and the mic answer.
 - Build it on this same Mac: the APK is signed with this Mac's debug key (`tools/pack.py` does not re-sign). Another machine's build gets 签名不一致 and only goes on after an uninstall.
 - One `INPUT` line per parent message in `family-agent/.co/logs/` is how you know they used it. Don't paste those lines anywhere.
