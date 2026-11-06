@@ -72,6 +72,19 @@ cases:
         - "Anything the notebook does not say, such as meals or sleep"
         - "tell_child was called"
 
+  # The notebook holds work, never meals: the most common question always finds nothing. 小乐 never speaks first and
+  # never hears what he answers, so a promise to come back with the news is one it can never keep.
+  - id: did-he-eat
+    kind: counterexample
+    input: "他今天吃饭了吗"
+    expect:
+      must:
+        - "tell_child was called in this turn"
+        - "The reply says it does not know yet and that he will tell them himself"
+      must_not:
+        - "The reply promises that 小乐 will tell the parents later (有消息了告诉你们, 回头告诉你们)"
+        - "The reply says whether he ate"
+
   - id: empty-after-days
     kind: normal
     given: "The chat has no earlier lines: days passed since the parents last wrote and the old conversation expired"
