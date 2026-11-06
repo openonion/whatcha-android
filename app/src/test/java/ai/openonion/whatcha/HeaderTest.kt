@@ -57,4 +57,11 @@ class HeaderTest {
         assertNull(statusText(Status.ONLINE))
         assertNull(statusText(Status.CONNECTING))
     }
+
+    // A warm open after the phone was off the network looks like a cold open: 连接中 in the title, no strip.
+    @Test
+    fun comingBackWhileOfflineLooksLikeAColdOpen() {
+        assertEquals("小乐(连接中…)", headerTitle("小乐", listOf(asked(Delivery.DONE)), shownOnReturn(Status.OFFLINE)))
+        assertNull(statusText(shownOnReturn(Status.OFFLINE)))
+    }
 }

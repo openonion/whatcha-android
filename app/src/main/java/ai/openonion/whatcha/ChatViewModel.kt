@@ -31,6 +31,10 @@ internal fun nextDelay(previous: Long): Long = minOf(previous * 2, 60_000L)
 // Only while a retry is waiting; a try already under way is left to finish, so there is never a second socket.
 internal fun retryNow(status: Status, waiting: Boolean): Boolean = waiting && status != Status.ONLINE
 
+// The parent who comes back while it waits sees what a cold open shows: 连接中 in the title, nothing red.
+// UNPAIRED keeps its strip, because 重发安装包 is an instruction. A failed try puts the strip back (onDisconnected).
+internal fun shownOnReturn(status: Status): Status = if (status == Status.OFFLINE) Status.CONNECTING else status
+
 /** The one conversation on this phone. Keeps it on disk, reads replies aloud, reconnects on its own. */
 class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listener {
 
@@ -187,7 +191,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         sendQueued()
     }
 
-    // Stays OFFLINE (or UNPAIRED) while retrying: the strip must not change on every try. onConnected sets ONLINE
+    // Stays OFFLINE (or UNPAIRED) while retrying: the strip must not change on every scheduled try. onConnected sets ONLINE
     // and puts the wait back to 5 s; 5, 10, 20, 40, 60, 60… s until then.
     override fun onDisconnected(reason: String) = onMain {
         Log.w(TAG, "disconnected: $reason")
@@ -199,11 +203,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         }
     }
 
-    /** The app is on the screen again. The wait is not reset: if this try fails too, the slow schedule carries on. */
+    /** The app is on the screen again: 连接中 while this try runs. The wait is not reset: if the try fails, the strip
+     *  and the slow schedule carry on. */
     fun cameBack() {
         if (!retryNow(_status.value, retry?.isActive == true)) return
         Log.i(TAG, "back on screen; retrying now")
         retry?.cancel()
+        _status.value = shownOnReturn(_status.value)
         link?.open()
     }
 

@@ -42,4 +42,19 @@ class ReconnectTest {
     fun theFirstLaunchIsLeftAlone() {
         assertFalse(retryNow(Status.CONNECTING, waiting = false))
     }
+
+    @Test
+    fun comingBackWhileOfflineSaysConnecting() {
+        assertEquals(Status.CONNECTING, shownOnReturn(Status.OFFLINE))
+    }
+
+    @Test
+    fun comingBackWithAWrongCodeKeepsItsStrip() {
+        assertEquals(Status.UNPAIRED, shownOnReturn(Status.UNPAIRED))
+    }
+
+    @Test
+    fun comingBackOnlineChangesNothing() {
+        assertEquals(Status.ONLINE, shownOnReturn(Status.ONLINE))
+    }
 }

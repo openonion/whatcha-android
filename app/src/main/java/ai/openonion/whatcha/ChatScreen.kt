@@ -181,7 +181,8 @@ private fun EmptyHint(hint: String, modifier: Modifier) {
 }
 
 // WeChat's own words: 「对方正在输入...」 while the other side is writing, 「微信(连接中…)」 in the title on a cold
-// launch, so the parent knows to wait and sees nothing red. CONNECTING only ever means that first connection.
+// launch, so the parent knows to wait and sees nothing red. CONNECTING means a try the parent is waiting on: the
+// first launch, or coming back to the screen.
 // While OFFLINE the strip says 暂时联系不上, so nobody is typing; the question keeps its grey circle.
 internal fun headerTitle(name: String, lines: List<Line>, status: Status): String = when {
     lines.any { it.delivery == Delivery.SENT } && status != Status.OFFLINE -> "对方正在输入..."
