@@ -14,8 +14,8 @@ android {
         // Huawei phones on HarmonyOS 2-4 run Android 10-12 apps; 26 also covers older ones.
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.1.3"
     }
 
     compileOptions {
