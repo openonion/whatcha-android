@@ -57,4 +57,18 @@ class ReconnectTest {
     fun comingBackOnlineChangesNothing() {
         assertEquals(Status.ONLINE, shownOnReturn(Status.ONLINE))
     }
+
+    // A Mac that has just fallen asleep is still listed by the relay and never answers: 10 s, then the strip.
+    @Test
+    fun aTryWithNoAnswerIsGivenUpAfterTenSeconds() {
+        assertEquals(10_000L, CONNECT_DEADLINE_MS)
+        assertTrue(giveUpTry(Status.CONNECTING))
+        assertTrue(giveUpTry(Status.OFFLINE))
+        assertTrue(giveUpTry(Status.UNPAIRED))
+    }
+
+    @Test
+    fun anAnsweredTryIsKept() {
+        assertFalse(giveUpTry(Status.ONLINE))
+    }
 }

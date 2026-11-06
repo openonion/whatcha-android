@@ -25,11 +25,12 @@ class HeaderTest {
         assertEquals("小乐", headerTitle("小乐", listOf(asked(Delivery.FAILED)), Status.ONLINE))
     }
 
-    // WeChat's cold launch says 「微信(连接中…)」 in the title and shows nothing red; a reply on its way still wins.
+    // WeChat's cold launch says 「微信(连接中…)」 in the title and shows nothing red. A question still SENT from before
+    // does not make it 对方正在输入...: until CONNECTED nobody knows the Mac is there (round 30: 5 min with a frozen host).
     @Test
     fun whileConnectingTheTitleSaysSoLikeWeChat() {
         assertEquals("小乐(连接中…)", headerTitle("小乐", emptyList(), Status.CONNECTING))
-        assertEquals("对方正在输入...", headerTitle("小乐", listOf(asked(Delivery.SENT)), Status.CONNECTING))
+        assertEquals("小乐(连接中…)", headerTitle("小乐", listOf(asked(Delivery.SENT)), Status.CONNECTING))
     }
 
     // The strip under the title says 暂时联系不上; a title saying the other side is typing would contradict it.

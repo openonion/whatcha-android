@@ -40,6 +40,11 @@ class AgentLink(
         socket = client.newWebSocket(Request.Builder().url("${pairing.relay}/ws/input").build(), this)
     }
 
+    /** Gives up on the socket now; OkHttp then calls onFailure, so the caller hears onDisconnected as for any failure. */
+    fun drop() {
+        socket?.cancel()
+    }
+
     /** False when there is no open socket; the caller keeps the message and retries after reconnecting. */
     fun send(prompt: String, voice: Voice?, photo: ByteArray?): Boolean = socket?.send(wire.input(prompt, voice, photo)) ?: false
 

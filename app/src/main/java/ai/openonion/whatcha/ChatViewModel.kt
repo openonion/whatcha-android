@@ -35,6 +35,13 @@ internal fun retryNow(status: Status, waiting: Boolean): Boolean = waiting && st
 // UNPAIRED keeps its strip, because 重发安装包 is an instruction. A failed try puts the strip back (onDisconnected).
 internal fun shownOnReturn(status: Status): Status = if (status == Status.OFFLINE) Status.CONNECTING else status
 
+// A try the relay accepted but the Mac never answered (asleep, still listed) hung ~5 min in round 30. Past this,
+// with no CONNECTED, the socket is dropped and onDisconnected shows the strip and keeps the schedule.
+// 10 s: just over twice the slowest good try (4.5 s), and OkHttp's connect timeout.
+internal const val CONNECT_DEADLINE_MS = 10_000L
+
+internal fun giveUpTry(status: Status): Boolean = status != Status.ONLINE
+
 /** The one conversation on this phone. Keeps it on disk, reads replies aloud, reconnects on its own. */
 class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listener {
 
@@ -48,6 +55,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val player = Player()
     private var reconnectDelay = RECONNECT_DELAY_MS
     private var retry: Job? = null
+    private var deadline: Job? = null
 
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
@@ -68,7 +76,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     init {
         Log.i(TAG, "address=${Identity.load(app).address} agent=${pairing?.agent}")
         _lines.value.staleVoices(System.currentTimeMillis()).forEach { File(it).delete() }
-        link?.open()
+        open()
     }
 
     fun send(text: String) {
@@ -156,6 +164,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         Log.i(TAG, "connected session=$sessionId running=$running")
         prefs.edit().putString("session", sessionId).apply()
         save(_lines.value.afterReconnect(running))
+        deadline?.cancel()
         reconnectDelay = RECONNECT_DELAY_MS
         _status.value = Status.ONLINE
         sendQueued()
@@ -195,11 +204,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     // and puts the wait back to 5 s; 5, 10, 20, 40, 60, 60… s until then.
     override fun onDisconnected(reason: String) = onMain {
         Log.w(TAG, "disconnected: $reason")
+        deadline?.cancel()
         if (_status.value != Status.UNPAIRED) _status.value = Status.OFFLINE
         retry = viewModelScope.launch {
             delay(reconnectDelay)
             reconnectDelay = nextDelay(reconnectDelay)
-            link?.open()
+            open()
         }
     }
 
@@ -210,7 +220,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         Log.i(TAG, "back on screen; retrying now")
         retry?.cancel()
         _status.value = shownOnReturn(_status.value)
-        link?.open()
+        open()
+    }
+
+    // Every try, first launch, scheduled or on return, gets the same deadline; a dropped socket ends in onDisconnected.
+    private fun open() {
+        link?.open() ?: return
+        deadline = viewModelScope.launch {
+            delay(CONNECT_DEADLINE_MS)
+            if (!giveUpTry(_status.value)) return@launch
+            Log.w(TAG, "no CONNECTED in ${CONNECT_DEADLINE_MS / 1000} s; giving up this try")
+            link?.drop()
+        }
     }
 
     override fun onCleared() {
