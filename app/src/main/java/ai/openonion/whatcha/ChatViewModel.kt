@@ -160,10 +160,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     }
 
     // OkHttp calls back on its own thread; the conversation is only ever changed on the main thread.
-    override fun onConnected(sessionId: String, running: Boolean) = onMain {
-        Log.i(TAG, "connected session=$sessionId running=$running")
+    override fun onConnected(sessionId: String, running: Boolean, history: List<Pair<Boolean, String>>) = onMain {
+        // The count only: the items are the family's conversation.
+        Log.i(TAG, "connected session=$sessionId running=$running history=${history.size}")
         prefs.edit().putString("session", sessionId).apply()
-        save(_lines.value.afterReconnect(running))
+        save(_lines.value.afterReconnect(running, history, System.currentTimeMillis()))
         deadline?.cancel()
         reconnectDelay = RECONNECT_DELAY_MS
         _status.value = Status.ONLINE

@@ -25,7 +25,11 @@ class AgentLinkTest {
 
     private class Heard : AgentLink.Listener {
         val events = mutableListOf<String>()
-        override fun onConnected(sessionId: String, running: Boolean) { events += "connected $sessionId running=$running" }
+        var history: List<Pair<Boolean, String>>? = null
+        override fun onConnected(sessionId: String, running: Boolean, history: List<Pair<Boolean, String>>) {
+            events += "connected $sessionId running=$running"
+            this.history = history
+        }
         override fun onProfile(name: String) {}
         override fun onReply(text: String) {}
         override fun onError(message: String) { events += "error" }
@@ -97,5 +101,15 @@ class AgentLinkTest {
     fun anyOtherErrorStillReachesTheListener() {
         link.onMessage(Sent(), """{"type":"ERROR","message":"Agent completed without result"}""")
         assertEquals(listOf("error"), heard.events)
+    }
+
+    // connectonion establish_connection sends server_newer, session and chat_items when the stored session is newer.
+    @Test
+    fun connectedCarriesTheConversation() {
+        link.onMessage(Sent(), """{"type":"CONNECTED","session_id":"s1","status":"connected","server_newer":true,"session":{},
+            "chat_items":[{"id":"msg-0","type":"user","content":"q"},{"id":"t","type":"tool_call","name":"x"},{"id":"msg-2","type":"agent","content":"a"}]}""")
+        assertEquals(listOf(true to "q", false to "a"), heard.history)
+        link.onMessage(Sent(), """{"type":"CONNECTED","session_id":"s1","status":"connected"}""")
+        assertEquals(emptyList<Pair<Boolean, String>>(), heard.history)
     }
 }

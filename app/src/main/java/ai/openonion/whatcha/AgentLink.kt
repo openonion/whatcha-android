@@ -2,6 +2,8 @@ package ai.openonion.whatcha
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
@@ -22,7 +24,7 @@ class AgentLink(
 
     interface Listener {
         /** [running]: the agent is still working on this session, so its reply is still coming. */
-        fun onConnected(sessionId: String, running: Boolean)
+        fun onConnected(sessionId: String, running: Boolean, history: List<Pair<Boolean, String>>)
         fun onProfile(name: String)
         fun onReply(text: String)
         fun onError(message: String)
@@ -57,7 +59,7 @@ class AgentLink(
         when (frame.string("type")) {
             "CONNECTED" -> {
                 sessionId = frame.string("session_id") ?: sessionId
-                listener.onConnected(sessionId!!, frame.string("status") == "running")
+                listener.onConnected(sessionId!!, frame.string("status") == "running", frame.history())
             }
             "ONBOARD_REQUIRED" -> onboard(webSocket)
             "AGENT_PROFILE" -> frame.string("name")?.let(listener::onProfile)
@@ -104,3 +106,10 @@ private const val HOST_FORGOT_US = "authenticate first"
 private const val INVITE_REFUSED = "Invalid invite code"
 
 private fun JsonObject.string(key: String): String? = this[key]?.jsonPrimitive?.content
+
+// The parent's questions and 小乐's answers from CONNECTED's chat_items, in order; tool and thinking items are left out.
+// A question with a picture has a list for content, which reads as "" and so never matches a waiting line.
+private fun JsonObject.history(): List<Pair<Boolean, String>> =
+    this["chat_items"]?.jsonArray.orEmpty().map { it.jsonObject }
+        .filter { it.string("type") == "user" || it.string("type") == "agent" }
+        .map { (it.string("type") == "user") to (it["content"] as? JsonPrimitive)?.content.orEmpty() }
