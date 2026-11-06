@@ -579,3 +579,5 @@ Architect, row 36a (round36-brief). Agent side only: `skills/xiaole/SKILL.md`, t
 Side note, not fixed: on the empty notebook the model once called `search_notebook("")`, and `co rem search ''` exits 1. The tool error went back to the model and it still answered right.
 
 Cleanup: no host, no emulator, port 8000 free. Scratch benchmark `xiaole-r36red.yaml` and the baseline copy stay in the scratchpad.
+
+Owner check (22:37 Sydney, 2026-11-06): pulled e5c9fac. `report.json` of run `20261106T113606286432Z-a83e` reads 19/19 cases, 38/38 attempts, 114/114 checks, exit 0, `live: False`. The `did-he-eat` case is in `xiaole.yaml` with the no-promise `must_not`. The SKILL.md diff matches the log. `git diff 50f4a29..HEAD --stat` touches nothing under `app/`; newest tag `v0.1.7`; port 8000 free; no Co-Authored-By. Accepted. 36a and 35a reach a family only after `git pull` and a `co host` restart on the child's Mac; v0.1.8 is tagged in the morning round after the 34a+35a+36a sweep.
