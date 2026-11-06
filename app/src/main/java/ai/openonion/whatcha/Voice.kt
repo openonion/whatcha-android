@@ -19,7 +19,7 @@ internal fun worthSending(millis: Long): Boolean = millis >= 1_000
 enum class MicStep { TALK, ASK_AGAIN, OPEN_SETTINGS }
 
 const val MIC_ASK_AGAIN = "要允许录音，才能按住说话"
-const val MIC_SETTINGS_STEPS = "要允许录音，\n才能按住说话。\n点「去设置」，再点\n权限 → 麦克风 → 允许，\n弄好了按返回。"
+const val MIC_SETTINGS_STEPS = "要允许录音，\n才能按住说话。\n点「去设置」，\n再点 权限 →\n麦克风 → 允许\n然后按返回，\n按到聊天出来。"
 
 /**
  * After the system's microphone question. [rationale] is shouldShowRequestPermissionRationale read in the answer;

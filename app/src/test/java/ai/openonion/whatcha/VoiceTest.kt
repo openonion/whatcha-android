@@ -94,8 +94,15 @@ class VoiceTest {
     @Test
     fun theDialogSaysWhereToTapInThePhonesOwnWords() {
         assertTrue(MIC_SETTINGS_STEPS.contains("录音"))
-        assertTrue(MIC_SETTINGS_STEPS.contains("权限 → 麦克风 → 允许"))
+        assertTrue(MIC_SETTINGS_STEPS.contains("权限 →\n麦克风 → 允许"))
         assertTrue(MIC_ASK_AGAIN.contains("录音"))
         assertFalse(MIC_ASK_AGAIN.contains("麦克风"))
+    }
+
+    @Test
+    fun theDialogLinesStayWholeAtTheLargestFont() {
+        // At font 2.0 the 272dp body holds 8 full-width characters; count a space or an arrow as one to be safe.
+        for (line in MIC_SETTINGS_STEPS.lines()) assertTrue(line, line.length <= 8)
+        assertTrue(MIC_SETTINGS_STEPS.contains("按到聊天出来"))
     }
 }
