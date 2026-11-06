@@ -72,7 +72,7 @@ The app is only the parents' end. What 小乐 says is decided by a skill on the 
 - tell only what really happened, and say "I'll ask" when it does not know;
 - leave money, health, relationships and names for the child to tell: one true work fact first, then that it is his to tell, said differently each time;
 - say 你们 to the two parents, never 您, and open with one line, 「叔叔阿姨好，我是小乐，你儿子请的 AI。」, once;
-- tell the child at once if the parents say something worrying;
+- tell the child at once if the parents say something worrying (a notification on the child's Mac);
 - turn a voice message into words before answering it, and ask again if it holds no sound;
 - say warmly what it sees in a photo the parents send, and never that the child has seen it;
 - describe only what the app can do (type, hold to talk, send a photo from the album, tap a reply to hear it), never "I'll call you" or "here's a photo".
@@ -80,6 +80,8 @@ The app is only the parents' end. What 小乐 says is decided by a skill on the 
 For voice messages the agent needs a transcription tool: copy [`skills/xiaole/voice.py`](skills/xiaole/voice.py) next to your `agent.py` and pass `tools=[transcribe_voice]`. It needs `ffmpeg`. It checks for silence first, because given silence the transcription service makes up a sentence. Recordings are kept on the phone for 30 days, and the agent removes each upload once it has heard it.
 
 For 「在干嘛」 the agent needs to read the child's notebook: copy [`skills/xiaole/rem.py`](skills/xiaole/rem.py) next to your `agent.py` and pass its three tools, `recent_sessions`, `show_page` and `search_notebook`. They read the `co rem` notebook (`~/.co/rem`, or `REM_ROOT`) and hand the pages to the agent as they are; the skill takes only the work from them and leaves money, health, relationships and names out.
+
+To keep 「我跟他说一声」, copy [`skills/xiaole/child.py`](skills/xiaole/child.py) next to your `agent.py` and pass `tell_child`: it shows the parents' words as a macOS notification titled 小乐 on the Mac that runs the host (while a Focus is on, it goes to Notification Center without a banner), the tool call in the host log is the record, and under `co eval` without `--live` it shows nothing.
 
 The skill has a benchmark, [`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml), with a fictional notebook in [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/) that mixes a finished bug fix with an overdue invoice, short sleep, an argument and the client's, shop's and co-founder's names in Chinese and English, so the traps are tested. Copy the yaml to your agent's `.co/benchmarks/` and run `co eval run xiaole --agent skills/xiaole/benchmark/agent.py` before and after you change the skill, with the Python `co` runs on (`co doctor` prints it as Python Path); `python skills/xiaole/benchmark/empty_check.py` checks the empty-notebook answer, `memory_check.py` the second turn, and `python skills/xiaole/benchmark/report_check.py <run>/report.json` reads the run's replies for trap words, 转告, 您 and 满意, length (median under 52, none over 65) and that no trap reply is given to two different questions.
 

@@ -57,6 +57,7 @@ Parents far away: send `whatcha-family.apk` into your WeChat chat with them, and
 - A new version goes into the same WeChat chat and installs over the old one. Don't uninstall first: that deletes the chat and the mic answer.
 - Build it on this same Mac: the APK is signed with this Mac's debug key (`tools/pack.py` does not re-sign). Another machine's build gets 签名不一致 and only goes on after an uninstall.
 - One `INPUT` line per parent message in `family-agent/.co/logs/` is how you know they used it. Don't paste those lines anywhere.
+- 小乐's 「我跟他说一声」 shows up as a notification on this Mac; that is the parents asking for you.
 
 ## Stop, uninstall
 

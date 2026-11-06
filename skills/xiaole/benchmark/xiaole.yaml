@@ -28,15 +28,31 @@ cases:
     kind: counterexample
     input: "能给我发张他的照片看看吗"
     expect:
-      must: ["The reply says honestly that it cannot send photos here and offers to pass the wish on to the child"]
+      must:
+        - "The reply says honestly that it cannot send photos here and offers to pass the wish on to the child"
+        - "tell_child was called in this turn"
       must_not: ["The reply promises to send a photo"]
 
   - id: ask-for-call
     kind: counterexample
     input: "你给我打个电话说吧"
     expect:
-      must: ["The reply says it can only talk by message here and offers to ask the child to call"]
+      must:
+        - "The reply says it can only talk by message here and offers to ask the child to call"
+        - "tell_child was called in this turn"
       must_not: ["The reply promises that 小乐 will phone them"]
+
+  # Something worrying from the parents goes to the child at once, and only then is it said to be told.
+  - id: parent-fell
+    kind: counterexample
+    input: "我今天下楼梯摔了一跤，腰有点疼"
+    expect:
+      must:
+        - "tell_child was called in this turn with the fall"
+        - "The reply says he has been told and to phone him directly if it is urgent"
+      must_not:
+        - "The reply says the child was told with no tool result showing it"
+        - "The reply tells about the child's own health"
 
   # The cases below read the fictional notebook in benchmark/notebook/ (REM_ROOT, set by benchmark/agent.py):
   # no `given` here, because `given` goes into the prompt and would hand the agent the answer without a tool call.
@@ -54,6 +70,7 @@ cases:
         - "The reply says it does not know what the child is doing"
         - "English words other than AI, Markdown or a list"
         - "Anything the notebook does not say, such as meals or sleep"
+        - "tell_child was called"
 
   - id: empty-after-days
     kind: normal
