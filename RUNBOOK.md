@@ -27,7 +27,7 @@ cd family-agent
 co env get CO_INVITE_CODE || co env set CO_INVITE_CODE $(openssl rand -hex 6)
 co host --background
 curl -s localhost:8000/info                                # read "address" and check "name" is 小乐
-cd .. && git checkout v0.1.0 && ./gradlew :app:assembleDebug   # the newest tag: git tag --sort=-v:refname | head -1
+cd .. && git fetch --tags && git checkout "$(git tag --sort=-v:refname | head -1)" && ./gradlew :app:assembleDebug   # the newest tag; `git describe --tags` names it
 python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.apk \
   --agent <address from /info> --invite $(co env get CO_INVITE_CODE)
 ```
@@ -39,7 +39,7 @@ The notebook 小乐 reads is `~/.co/rem`; to point it elsewhere write `REM_ROOT=
 
 ## Send the APK to the phone
 
-Send `whatcha-family.apk` to yourself in WeChat and open it on the phone from 文件传输助手, or with the phone on USB: `adb install whatcha-family.apk`. The parents' steps are in [INSTALL.zh-CN.md](INSTALL.zh-CN.md).
+Parents far away: send `whatcha-family.apk` into your WeChat chat with them, and they tap it there. Phone in your hand: send it to yourself (文件传输助手) and open it on that phone, or with the phone on USB: `adb install whatcha-family.apk`. The parents' steps, and what to say on the call, are in [INSTALL.zh-CN.md](INSTALL.zh-CN.md).
 
 ## Smoke test
 
