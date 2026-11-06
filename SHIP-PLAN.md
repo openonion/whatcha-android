@@ -596,3 +596,5 @@ Architect, backlog item 2's gate run ahead of the morning (PM step skipped: roun
 Cleanup: app uninstalled, Wi-Fi and data on, `font_scale` null (untouched), Latin IME as found, HOME, `adb emu kill`, `adb kill-server`, `~/r37` removed on Parrot. Test host stopped (cwd checked: the copy; it and its parent shell killed), port 8000 free; the host copy and scratch APK removed (host log kept in the scratchpad as `round37-host70.log`). `~/.co` untouched (`served_by.json` still dated Nov 5). Mac emulator not started.
 
 Designer step skipped: nothing changed on screen.
+
+Owner check (23:49 Sydney, 2026-11-06): pulled d121fd8 (SHIP-PLAN and three screenshots only). `round37-host70.log`: 4 INPUT, 2 `tell_child` (the fall and the meal question), as reported. `parrot-37-fell-recovered.png` shows one question and the stored answer, no spinner, no second copy. Newest tag `v0.1.7`; port 8000 free. The parents' lines were typed in English (no Chinese keyboard on the AVD); the replies, the part under test, are Chinese. Accepted: the morning round is bump to 9 / 0.1.8, full eval, packed-APK version, tag.
