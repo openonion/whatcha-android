@@ -1,5 +1,11 @@
 package ai.openonion.whatcha
 
+import android.media.AudioManager.MODE_IN_CALL
+import android.media.AudioManager.MODE_IN_COMMUNICATION
+import android.media.AudioManager.MODE_NORMAL
+import android.media.AudioManager.MODE_RINGTONE
+import android.media.MediaRecorder.AudioSource.MIC
+import android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -104,5 +110,31 @@ class VoiceTest {
         // At font 2.0 the 272dp body holds 8 full-width characters; count a space or an arrow as one to be safe.
         for (line in MIC_SETTINGS_STEPS.lines()) assertTrue(line, line.length <= 8)
         assertTrue(MIC_SETTINGS_STEPS.contains("按到聊天出来"))
+    }
+
+    @Test
+    fun aPhoneCallHasTheMic() {
+        assertTrue(callHasMic(MODE_IN_CALL, emptyList()))
+    }
+
+    @Test
+    fun aWeChatStyleCallHasTheMic() {
+        assertTrue(callHasMic(MODE_IN_COMMUNICATION, emptyList()))
+    }
+
+    @Test
+    fun aCallAppRecordingWithoutSettingTheModeHasTheMic() {
+        assertTrue(callHasMic(MODE_NORMAL, listOf(VOICE_COMMUNICATION)))
+    }
+
+    @Test
+    fun theWakeWordListenerDoesNotBlockTalking() {
+        assertFalse(callHasMic(MODE_NORMAL, listOf(1999 /* HOTWORD, hidden */, MIC)))
+        assertFalse(callHasMic(MODE_RINGTONE, emptyList()))
+    }
+
+    @Test
+    fun theCallWordsFitOnEightCharacterLines() {
+        for (line in MIC_IN_CALL.lines()) assertTrue(line, line.length <= 8)
     }
 }

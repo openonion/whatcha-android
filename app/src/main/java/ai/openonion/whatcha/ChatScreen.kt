@@ -367,6 +367,9 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
     val context = LocalContext.current
     val activity = context as Activity
     var micDialog by rememberSaveable { mutableStateOf(false) }
+    var callDialog by rememberSaveable { mutableStateOf(false) }
+    // A press refused because a call holds the mic; the dialog waits for the finger to lift.
+    var refusedForCall by remember { mutableStateOf(false) }
     // Survives the process dying while the parent is in Settings; only our 去设置 sets it.
     var sentToSettings by rememberSaveable { mutableStateOf(false) }
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -396,6 +399,7 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
         onCancel = { micDialog = false },
         onGo = { micDialog = false; sentToSettings = true; openAppSettings(activity) },
     )
+    if (callDialog) CallDialog(onClose = { callDialog = false })
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.sendPhoto(uri) }
     var draft by rememberSaveable { mutableStateOf("") }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
@@ -420,8 +424,16 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
             recording,
             // The permission can go between launches (a one-time grant, the phone's own cleanup): ask, never record without it.
             // Ask once the finger is up: a system question opened under a held finger made the app "not responding".
-            onPress = { if (micAllowed()) vm.startRecording() },
-            onRelease = { vm.stopRecording(); if (!micAllowed()) askForMic() },
+            // A call gives a second recorder silence, so say so instead of sending a quiet message.
+            onPress = {
+                refusedForCall = micAllowed() && vm.callHasMic
+                if (micAllowed() && !refusedForCall) vm.startRecording()
+            },
+            onRelease = {
+                vm.stopRecording()
+                if (!micAllowed()) askForMic()
+                if (refusedForCall) callDialog = true
+            },
             modifier = Modifier.weight(1f))
         else TypeBox(draft, onChange = { draft = it }, modifier = Modifier.weight(1f))
         Spacer(Modifier.width(8.dp))
@@ -447,6 +459,18 @@ private fun MicDialog(onCancel: () -> Unit, onGo: () -> Unit) {
                 Box(Modifier.width(1.dp).fillMaxHeight().background(Divider))
                 DialogButton("去设置", Body.copy(color = Color(0xFF576B95), fontWeight = FontWeight.Medium), Modifier.weight(1f), onGo)
             }
+        }
+    }
+}
+
+/** Like WeChat during a call: the mic is busy, said in large type, with one 知道了. Back or a tap outside closes it too. */
+@Composable
+private fun CallDialog(onClose: () -> Unit) {
+    Dialog(onDismissRequest = onClose) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White)) {
+            Text(MIC_IN_CALL, style = Body, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
+            DialogButton("知道了", Body.copy(color = Color(0xFF576B95), fontWeight = FontWeight.Medium), Modifier.fillMaxWidth(), onClose)
         }
     }
 }

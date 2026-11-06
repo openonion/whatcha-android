@@ -1,6 +1,7 @@
 package ai.openonion.whatcha
 
 import android.content.Context
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
@@ -32,6 +33,13 @@ internal fun afterMicAnswer(granted: Boolean, rationale: Boolean, saidNoBefore: 
     rationale || !saidNoBefore -> MicStep.ASK_AGAIN
     else -> MicStep.OPEN_SETTINGS
 }
+
+/** A call has the microphone: Android hands the call all the sound and gives a second recorder silence. */
+internal fun callHasMic(mode: Int, recordingSources: List<Int>): Boolean =
+    mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION ||
+        MediaRecorder.AudioSource.VOICE_COMMUNICATION in recordingSources
+
+const val MIC_IN_CALL = "正在打电话，\n不能录音。\n挂了电话\n再按住说话。"
 
 internal fun voiceLabel(seconds: Int): String = "$seconds″"
 

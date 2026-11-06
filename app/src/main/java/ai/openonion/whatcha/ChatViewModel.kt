@@ -1,6 +1,7 @@
 package ai.openonion.whatcha
 
 import android.app.Application
+import android.media.AudioManager
 import android.net.Uri
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -34,6 +35,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     private val voice = TextToSpeech(app) { }
     private var spoken: String? = null
     private val recorder = Recorder(app)
+    private val audio = app.getSystemService(AudioManager::class.java)
     private val player = Player()
     private var reconnectDelay = RECONNECT_DELAY_MS
 
@@ -74,6 +76,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     val saidNoToMic get() = prefs.getBoolean("saidNoToMic", false)
 
     fun rememberSaidNoToMic() = prefs.edit().putBoolean("saidNoToMic", true).apply()
+
+    /** A phone or WeChat call is holding the microphone; a recording now would be silence. Needs no permission. */
+    val callHasMic get() = callHasMic(audio.mode, audio.activeRecordingConfigurations.map { it.clientAudioSource })
 
     fun startRecording() {
         voice.stop()
