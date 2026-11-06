@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -64,6 +66,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -404,6 +407,11 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
     if (callDialog) CallDialog(onClose = { callDialog = false })
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.sendPhoto(uri) }
     var draft by rememberSaveable { mutableStateOf("") }
+    // Parents come back to read the answer, so the box lets go of focus when the app leaves the screen: no keyboard
+    // over the chat on return. The draft stays; one tap brings the keys. stateAlwaysHidden would hide the keys but
+    // keep the focus and the cursor (30f). Android's snapshot is taken before this runs, even on ON_PAUSE (30e).
+    val focusManager = LocalFocusManager.current
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { focusManager.clearFocus() }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
     Row(
         Modifier.fillMaxWidth().background(BarBackground).padding(horizontal = 12.dp, vertical = 10.dp),
