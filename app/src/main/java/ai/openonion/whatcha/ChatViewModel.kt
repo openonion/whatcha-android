@@ -70,6 +70,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         prefs.edit().putBoolean("voiceMode", on).apply()
     }
 
+    /** Whether this parent has ever said No to the microphone; it tells Back on the first question from "don't ask again". */
+    val saidNoToMic get() = prefs.getBoolean("saidNoToMic", false)
+
+    fun rememberSaidNoToMic() = prefs.edit().putBoolean("saidNoToMic", true).apply()
+
     fun startRecording() {
         voice.stop()
         player.stop()

@@ -23,6 +23,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -362,15 +366,36 @@ private fun Avatar(@DrawableRes picture: Int, who: String) {
 private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) {
     val context = LocalContext.current
     val activity = context as Activity
+    var micDialog by rememberSaveable { mutableStateOf(false) }
+    // Survives the process dying while the parent is in Settings; only our 去设置 sets it.
+    var sentToSettings by rememberSaveable { mutableStateOf(false) }
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        val canAskAgain = activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
-        when (afterMicAnswer(granted, canAskAgain)) {
+        val rationale = activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
+        val step = afterMicAnswer(granted, rationale, vm.saidNoToMic)
+        if (rationale) vm.rememberSaidNoToMic()
+        when (step) {
             MicStep.TALK -> vm.setVoiceMode(true)
             MicStep.ASK_AGAIN -> Toast.makeText(context, MIC_ASK_AGAIN, Toast.LENGTH_LONG).show()
-            MicStep.OPEN_SETTINGS -> openAppSettings(activity)
+            MicStep.OPEN_SETTINGS -> micDialog = true
         }
     }
     val micAllowed = { context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED }
+    // Rationale already true before the ask is a No on record too: the switch turned off in Settings, where one more
+    // No ends the asking with rationale false, so without this the dialog would never come.
+    val askForMic = {
+        if (activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) vm.rememberSaidNoToMic()
+        askMic.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    // Runs on every resume; reads the state then, so a parent who chose typing is only switched after our 去设置.
+    LifecycleResumeEffect(Unit) {
+        if (sentToSettings && micAllowed()) vm.setVoiceMode(true)
+        sentToSettings = false
+        onPauseOrDispose {}
+    }
+    if (micDialog) MicDialog(
+        onCancel = { micDialog = false },
+        onGo = { micDialog = false; sentToSettings = true; openAppSettings(activity) },
+    )
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.sendPhoto(uri) }
     var draft by rememberSaveable { mutableStateOf("") }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
@@ -380,7 +405,7 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
     ) {
         Box(
             Modifier.size(TargetSize).clickable {
-                if (voiceMode || micAllowed()) vm.setVoiceMode(!voiceMode) else askMic.launch(Manifest.permission.RECORD_AUDIO)
+                if (voiceMode || micAllowed()) vm.setVoiceMode(!voiceMode) else askForMic()
             },
             contentAlignment = Alignment.Center,
         ) {
@@ -394,8 +419,10 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
         if (voiceMode) HoldToTalk(
             recording,
             // The permission can go between launches (a one-time grant, the phone's own cleanup): ask, never record without it.
-            onPress = { if (micAllowed()) vm.startRecording() else askMic.launch(Manifest.permission.RECORD_AUDIO) },
-            onRelease = vm::stopRecording, modifier = Modifier.weight(1f))
+            // Ask once the finger is up: a system question opened under a held finger made the app "not responding".
+            onPress = { if (micAllowed()) vm.startRecording() },
+            onRelease = { vm.stopRecording(); if (!micAllowed()) askForMic() },
+            modifier = Modifier.weight(1f))
         else TypeBox(draft, onChange = { draft = it }, modifier = Modifier.weight(1f))
         Spacer(Modifier.width(8.dp))
         if (voiceMode || draft.isBlank()) PickPhoto { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
@@ -405,8 +432,30 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
 
 /** The phone's own page for this app, where 权限 → 麦克风 is switched back on. */
 private fun openAppSettings(activity: Activity) {
-    Toast.makeText(activity, MIC_OPEN_SETTINGS, Toast.LENGTH_LONG).show()
     activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null)))
+}
+
+/** WeChat's refused-mic dialog (WeUI): the steps in large type, then 取消 and 去设置 sharing the width. Back or a tap outside is 取消. */
+@Composable
+private fun MicDialog(onCancel: () -> Unit, onGo: () -> Unit) {
+    Dialog(onDismissRequest = onCancel) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White)) {
+            Text(MIC_SETTINGS_STEPS, style = Body, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                DialogButton("取消", Body, Modifier.weight(1f), onCancel)
+                Box(Modifier.width(1.dp).fillMaxHeight().background(Divider))
+                DialogButton("去设置", Body.copy(color = Color(0xFF576B95), fontWeight = FontWeight.Medium), Modifier.weight(1f), onGo)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DialogButton(label: String, style: TextStyle, modifier: Modifier, onTap: () -> Unit) {
+    Box(modifier.heightIn(min = 60.dp).clickable(role = Role.Button) { onTap() }, contentAlignment = Alignment.Center) {
+        Text(label, style = style, modifier = Modifier.padding(vertical = 12.dp))
+    }
 }
 
 @Composable

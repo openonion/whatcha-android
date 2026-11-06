@@ -67,17 +67,35 @@ class VoiceTest {
 
     @Test
     fun allowingTheMicrophoneSwitchesToHoldToTalk() {
-        assertEquals(MicStep.TALK, afterMicAnswer(granted = true, canAskAgain = false))
-        assertEquals(MicStep.TALK, afterMicAnswer(granted = true, canAskAgain = true))
+        for (rationale in listOf(false, true)) for (saidNoBefore in listOf(false, true))
+            assertEquals(MicStep.TALK, afterMicAnswer(granted = true, rationale = rationale, saidNoBefore = saidNoBefore))
+    }
+
+    @Test
+    fun backOnTheFirstQuestionAsksAgainInsteadOfOpeningSettings() {
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, rationale = false, saidNoBefore = false))
     }
 
     @Test
     fun aFirstNoIsAskedAgainNextTime() {
-        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, canAskAgain = true))
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, rationale = true, saidNoBefore = false))
     }
 
     @Test
-    fun aNoTheSystemWillNotAskAgainOpensTheSettingsPage() {
-        assertEquals(MicStep.OPEN_SETTINGS, afterMicAnswer(granted = false, canAskAgain = false))
+    fun aNoAfterAnEarlierNoThatTheSystemWillStillAskIsAskedAgain() {
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, rationale = true, saidNoBefore = true))
+    }
+
+    @Test
+    fun aSecondNoShowsWhereToTap() {
+        assertEquals(MicStep.OPEN_SETTINGS, afterMicAnswer(granted = false, rationale = false, saidNoBefore = true))
+    }
+
+    @Test
+    fun theDialogSaysWhereToTapInThePhonesOwnWords() {
+        assertTrue(MIC_SETTINGS_STEPS.contains("录音"))
+        assertTrue(MIC_SETTINGS_STEPS.contains("权限 → 麦克风 → 允许"))
+        assertTrue(MIC_ASK_AGAIN.contains("录音"))
+        assertFalse(MIC_ASK_AGAIN.contains("麦克风"))
     }
 }
