@@ -2,22 +2,44 @@ package ai.openonion.whatcha
 
 import android.content.Context
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Base64
 
-/**
- * Which agent this phone talks to. The parent never types it: `tools/pack.py`
- * writes it into the APK's signing block, and the first launch reads it from
- * the installed APK and keeps it.
- */
+/** Which agent this phone talks to; permanent once the host has accepted this phone. */
 @Serializable
 data class Pairing(
     val agent: String,
     val relay: String = "wss://oo.openonion.ai",
     val invite: String? = null,
+    val accepted: Boolean = false,
 )
+
+internal fun canPastePairing(current: Pairing?, status: Status): Boolean =
+    current == null || (!current.accepted && status == Status.REFUSED)
+
+internal fun pairingAfterPaste(current: Pairing?, status: Status, text: String): Pairing? =
+    if (canPastePairing(current, status)) parsePairing(text) ?: current else current
+
+internal fun Pairing.afterConnected(): Pairing = copy(accepted = true)
+
+/** Shared WC1 format: a 32-byte agent address followed by a 12-byte ticket token. */
+fun parsePairing(text: String): Pairing? {
+    val payload = Regex("#WC1\\.([A-Za-z0-9_-]{59})#").find(text)?.groupValues?.get(1) ?: return null
+    val bytes = Base64.getUrlDecoder().decode(payload)
+    return Pairing(
+        agent = "0x" + bytes.take(32).joinToString("") { "%02x".format(it) },
+        invite = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes.copyOfRange(32, 44)),
+    )
+}
+
+fun savePairing(context: Context, pairing: Pairing) {
+    context.getSharedPreferences("pairing", Context.MODE_PRIVATE).edit()
+        .putString("pairing", Json.encodeToString(pairing)).apply()
+}
 
 /** ID of our entry in the APK Signing Block. ASCII "what". Must match tools/pack.py. */
 const val PAIRING_BLOCK_ID = 0x77686174

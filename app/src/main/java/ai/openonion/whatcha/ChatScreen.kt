@@ -15,6 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -100,6 +102,7 @@ fun ChatScreen(vm: ChatViewModel) {
     val lines by vm.lines.collectAsState()
     val title by vm.title.collectAsState()
     val status by vm.status.collectAsState()
+    val pairing by vm.pairing.collectAsState()
     val voiceMode by vm.voiceMode.collectAsState()
     val recording by vm.recording.collectAsState()
     var viewing by remember { mutableStateOf<String?>(null) }
@@ -109,15 +112,46 @@ fun ChatScreen(vm: ChatViewModel) {
             Column(Modifier.fillMaxSize()) {
                 Header(headerTitle(title, lines, status))
                 statusText(status)?.let { StatusStrip(it) }
-                val hint = emptyHint(title, lines, status)
-                if (hint != null) EmptyHint(hint, Modifier.weight(1f))
-                else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onView = { viewing = it }, onRetry = vm::retry, modifier = Modifier.weight(1f))
-                if (status != Status.UNPAIRED) Composer(vm, voiceMode, recording)
+                if (status == Status.REFUSED && canPastePairing(pairing, status)) {
+                    PastePairing(vm::pastePairing, Modifier.padding(horizontal = 32.dp, vertical = 16.dp))
+                }
+                if (status == Status.UNPAIRED) PairingPrompt(vm::pastePairing, Modifier.weight(1f))
+                else {
+                    val hint = emptyHint(title, lines, status)
+                    if (hint != null) EmptyHint(hint, Modifier.weight(1f))
+                    else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onView = { viewing = it }, onRetry = vm::retry, modifier = Modifier.weight(1f))
+                    if (status != Status.REFUSED) Composer(vm, voiceMode, recording)
+                }
             }
             if (recording) RecordingCard(Modifier.align(Alignment.Center))
         }
         // Outside the padded box so the black reaches every edge of the screen, as WeChat's viewer does.
         viewing?.let { PhotoViewer(it, onClose = { viewing = null }) }
+    }
+}
+
+@Composable
+private fun PairingPrompt(onPaste: () -> Unit, modifier: Modifier) {
+    Box(modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("请孩子在微信里发来口令，长按复制，再回到这里", style = Body, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(32.dp))
+            PastePairing(onPaste)
+        }
+    }
+}
+
+@Composable
+private fun PastePairing(onPaste: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier.fillMaxWidth().heightIn(min = TargetSize).background(Green, RoundedCornerShape(6.dp))
+            .clickable(role = Role.Button) { onPaste() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("粘贴口令", style = Body.copy(color = Color.White), modifier = Modifier.padding(vertical = 12.dp))
     }
 }
 
@@ -169,10 +203,11 @@ private fun StatusStrip(text: String) {
 
 // A blank grey page gives a parent no reason to type; say what this is for until the first message.
 // With no line yet the grey middle says what the parent does next: ask, or, while the Mac has not accepted
-// this phone's invite code, call the child. With history the history is the page (11d).
+// this phone's ticket, call the child. With history the history is the page (11d).
 internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? = when {
     lines.isNotEmpty() -> null
-    status == Status.UNPAIRED -> "给孩子打个电话"
+    status == Status.UNPAIRED -> "请孩子在微信里发来口令，长按复制，再回到这里"
+    status == Status.REFUSED -> "给孩子打个电话"
     else -> "想知道孩子在干嘛，\n就在下面问$name，\n打字说话都行"
 }
 
@@ -198,7 +233,8 @@ internal fun headerTitle(name: String, lines: List<Line>, status: Status): Strin
 // sentence, never an error code. One clause per line: at the largest system font a clause of eight characters
 // still fits beside the !, a ninth wrapped onto a third line and a whole sentence wrapped mid-word.
 internal fun statusText(status: Status): String? = when (status) {
-    Status.UNPAIRED -> "还没连上，\n让孩子重发安装包"
+    Status.UNPAIRED -> null
+    Status.REFUSED -> "口令过期或用过了，\n请孩子重新发一条"
     Status.CONNECTING -> null
     Status.ONLINE -> null
     Status.OFFLINE -> "暂时联系不上，\n稍后会自己重试"

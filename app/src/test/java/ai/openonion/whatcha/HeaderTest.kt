@@ -45,11 +45,11 @@ class HeaderTest {
         assertEquals("暂时联系不上，\n稍后会自己重试", statusText(Status.OFFLINE))
     }
 
-    // Two clauses, the second eight characters: at the largest font the text column beside the 36dp ! is 315dp,
-    // and nine characters of 35dp wrapped the last one onto a third line. Two lines at both scales, not a poem.
+    // Each clause stays on its own line, including at large system font sizes.
     @Test
-    fun theUnpairedSentenceBreaksIntoShortClauses() {
-        assertEquals("还没连上，\n让孩子重发安装包", statusText(Status.UNPAIRED))
+    fun anUnpairedPhoneHasNoErrorStrip() {
+        assertNull(statusText(Status.UNPAIRED))
+        assertEquals("口令过期或用过了，\n请孩子重新发一条", statusText(Status.REFUSED))
     }
 
     // The strip is only for trouble, as WeChat's is only for 网络不可用; connecting is said in the title.

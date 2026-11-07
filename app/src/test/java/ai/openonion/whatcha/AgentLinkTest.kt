@@ -35,12 +35,37 @@ class AgentLinkTest {
         override fun onError(message: String) { events += "error" }
         override fun onRejected() { events += "rejected" }
         override fun onRefused() { events += "refused" }
-        override fun onDisconnected(reason: String) {}
+        override fun onDisconnected(reason: String) { events += "disconnected" }
     }
 
     private val me = Identity(Ed25519PrivateKeyParameters(ByteArray(32) { it.toByte() }, 0))
     private val heard = Heard()
     private val link = AgentLink(Pairing(agent = "0xagent"), Wire(me, "0xagent", now = { 1L }), heard, sessionId = "saved")
+
+    @Test
+    fun aReplacedLinkCannotChangeTheNewPairingsState() {
+        link.close()
+        val socket = Sent()
+        link.onMessage(socket, """{"type":"CONNECTED","session_id":"old"}""")
+        link.onMessage(socket, """{"type":"ERROR","message":"Invalid invite code"}""")
+        link.onFailure(socket, IllegalStateException("old socket"), null)
+        link.onClosed(socket, 1000, "old socket")
+        assertEquals(emptyList<String>(), heard.events)
+    }
+
+    @Test
+    fun replacingALinkDiscardsEventsAlreadyWaitingForTheMainThread() {
+        val pending = mutableListOf<() -> Unit>()
+        val old = AgentLink(Pairing(agent = "old"), Wire(me, "old"), heard, dispatch = { pending.add(it) })
+        val socket = Sent()
+        old.onMessage(socket, """{"type":"CONNECTED","session_id":"old"}""")
+        old.onMessage(socket, """{"type":"ERROR","message":"Invalid invite code"}""")
+        old.onFailure(socket, IllegalStateException("old socket"), null)
+        assertEquals(3, pending.size)
+        old.close()
+        pending.forEach { it() }
+        assertEquals(emptyList<String>(), heard.events)
+    }
 
     @Test
     fun aRelaunchedAppResumesTheSessionItSavedSoTheHostCanFinishTheReply() {

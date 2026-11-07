@@ -15,6 +15,12 @@ class MainActivity : ComponentActivity() {
         setContent { ChatScreen(vm) }
     }
 
+    // Android clipboard reads require window focus; onStart/onResume can be too early.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) vm.pastePairing()
+    }
+
     override fun onStart() {
         super.onStart()
         vm.cameBack()

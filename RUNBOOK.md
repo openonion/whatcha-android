@@ -1,6 +1,6 @@
 # Runbook: run 小乐 for one family
 
-Read this file and INSTALL.zh-CN.md from the `wechat-look` branch, or from the tag you build: [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md), [v0.1.9](https://github.com/openonion/whatcha-android/blob/v0.1.9/RUNBOOK.md). `main` is older and builds v0.1.0.
+The ticket commands below need the Sprint 2 code on [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md). The newest tag, [v0.1.9](https://github.com/openonion/whatcha-android/blob/v0.1.9/RUNBOOK.md), still uses the legacy packed pairing below; `main` is older and builds v0.1.0.
 
 Everything here runs on the child's Mac, from a checkout of this repo. The agent is the `~/.co` identity of that Mac.
 
@@ -25,37 +25,48 @@ Another `co host` project on the same Mac without its own `.co/keys/` shares you
 If you are a daughter, first change 你儿子 to 你女儿 in `skills/xiaole/SKILL.md` (three places: the opening line, the no-repeat example and the good-news example); the agent reads the skill once at start, so do it before `co host`.
 
 ```bash
-git fetch --tags && git checkout "$(git tag --sort=-v:refname | head -1)"   # the newest tag, before the host starts: 小乐 reads its skill once at start
 cd family-agent
-co env get CO_INVITE_CODE || co env set CO_INVITE_CODE $(openssl rand -hex 6)
 co host --background
-curl -s localhost:8000/info                                # read "address" and check "name" is 小乐
-cd .. && ./gradlew :app:assembleDebug                      # `git describe --tags` names the tag you build
-python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.apk \
-  --agent <address from /info> --invite $(co env get CO_INVITE_CODE)
-"$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)"/aapt2 dump badging whatcha-family.apk | grep -o "version[CN][a-z]*='[^']*'"
+curl -s localhost:8000/info                                # check "address" and "name": 小乐
+python ticket.py 妈妈                                      # use the Python from `co doctor`
+cd ..
+./gradlew :app:assembleDebug
+cp app/build/outputs/apk/debug/app-debug.apk whatcha.apk
+"$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)"/aapt2 dump badging whatcha.apk | grep -o "version[CN][a-z]*='[^']*'"
 ```
 
-The last line reads the version from the packed APK itself, not from the checkout. It must print the tag's version, `versionName='0.1.9'` (and `versionCode='10'`) for v0.1.9. If it prints `0.1.0`, stop: you are on an old checkout.
+Send the ordinary `whatcha.apk` and the two-line ticket message to the parent in WeChat. Run the ticket command once per family member, using their family label. It prints only the message to copy. It reads the running host's address from `http://localhost:8000/info`, so start the host first. For another host port, use `python ticket.py 妈妈 --port 8123`. Tickets live in the gitignored `family-agent/.co/tickets.json`; each is valid for 24 hours and one phone. Create another ticket for a new phone or an app reinstall that lost its identity. No host restart is needed after creating a ticket.
 
-The invite code lives in `~/.co/keys.env`, not in `family-agent/.env`: `co host` 1.9.3rc40 hands the agent the code from `keys.env` before it reads the project's `.env`, so a code written only in `.env` is refused while `keys.env` has one. `co init` already wrote one there; the second half of that line only runs when it did not.
+After joining, the same record contains `label`, `address`, and `used_at`: this is where the child can see which family member joined. Keep this file private. Do not send its contents or paste tickets into logs.
+
+The last build command checks the APK's version. It must print `versionName='0.1.9'` and `versionCode='10'`; `0.1.0` means an old checkout.
+
+### Legacy path: packed pairing for older APKs
+
+`tools/pack.py` still works for the old shared invite-code path. Existing contacts reconnect as before; keep their `CO_INVITE_CODE` if an older installed phone still needs to onboard. The code belongs in `~/.co/keys.env`, not only the project's `.env`.
+
+```bash
+co env get CO_INVITE_CODE || co env set CO_INVITE_CODE $(openssl rand -hex 6)
+python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.apk \
+  --agent <address from /info> --invite $(co env get CO_INVITE_CODE)
+```
 
 `co host --status` prints `{"configured": true, "running": true, "pid": N, ...}`. If `co host --background` ends with "a matching healthy Host was not observed" and `--status` says `"running": false`, launchd registered the service but has not spawned it yet (seen on macOS 14.1 from a shell started by another app): `launchctl kickstart gui/$(id -u)/ai.connectonion.host.<digest>` starts it now, with `<digest>` from `ls ~/Library/LaunchAgents`. Logging out and in starts it too. The host's own log is `family-agent/.co/logs/`; launchd's stdout/stderr go to `~/.co/host-services/<digest>/`.
 The notebook 小乐 reads is `~/.co/rem`; to point it elsewhere write `REM_ROOT=/path` into `family-agent/.env` and run `co host --background` again.
 
 ## Send the APK to the phone
 
-Parents far away: send `whatcha-family.apk` into your WeChat chat with them, and they tap it there. Phone in your hand: send it to yourself (文件传输助手) and open it on that phone, or with the phone on USB: `adb install whatcha-family.apk`. The parents' steps, and what to say on the call, are in [INSTALL.zh-CN.md](INSTALL.zh-CN.md).
+Parents far away: send `whatcha.apk` and the ticket message into your WeChat chat with them, and they tap it there. Phone in your hand: send it to yourself (文件传输助手) and open it on that phone, or with the phone on USB: `adb install whatcha.apk`. The parents' steps, and what to say on the call, are in [INSTALL.zh-CN.md](INSTALL.zh-CN.md).
 
 ## Smoke test
 
 1. `curl -s localhost:8000/info` answers with your address and `"name": "小乐"`.
-2. On the phone, open 在干嘛, type 「在干嘛」, and the reply comes from 小乐, opening 「叔叔阿姨好，我是小乐，你儿子请的 AI。」 once and then something from the notebook; a reply that introduces 小乐 again on the next message is the bug to report. The host log shows one `INPUT` line per message.
-3. The title drops 「(连接中…)」 within seconds. If the strip says 还没连上 with the Mac up, `grep 'Invalid invite' family-agent/.co/logs/*`: the APK's code is not the one in `~/.co/keys.env`. Re-pack, or `co env set CO_INVITE_CODE` to the packed one and `co host --background`; the phone reconnects by itself.
+2. On an unpaired phone, long-press the ticket message in WeChat → Copy → open 在干嘛. It should connect without a tap; if automatic clipboard access is blocked, tap 粘贴口令. Then type 「在干嘛」, and the reply comes from 小乐, opening 「叔叔阿姨好，我是小乐，你儿子请的 AI。」 once and then something from the notebook; a reply that introduces 小乐 again on the next message is the bug to report. The host log shows one `INPUT` line per message.
+3. The title drops 「(连接中…)」 within seconds. Check `.co/tickets.json` for the family label, joined address and `used_at`. If the strip says 「口令过期或用过了，\n请孩子重新发一条」, issue a fresh ticket and send it in WeChat. Before the first accepted connection, the parent can copy it and return, or tap 粘贴口令 under the strip, to replace the refused pairing immediately. This also works for a refused legacy packed pairing. The first `CONNECTED` makes pairing permanent; later clipboard text cannot replace it. Existing saved pairings without an acceptance flag are kept and gain the flag on their next connection. For a legacy packed APK, also check that its invite matches `CO_INVITE_CODE`.
 
 ## A new version, and the first week
 
-- A new tag changes 小乐 too: after `git checkout` of it, run `cd family-agent && co host --background` again before packing, or the host keeps the old skill.
+- A new tag changes 小乐 too: after `git checkout` of it, run `cd family-agent && co host --background` again before issuing tickets, or the host keeps the old skill.
 - A new version goes into the same WeChat chat and installs over the old one. Don't uninstall first: that deletes the chat and the mic answer.
 - Build it on this same Mac: the APK is signed with this Mac's debug key (`tools/pack.py` does not re-sign). Another machine's build gets 签名不一致 and only goes on after an uninstall.
 - One `INPUT` line per parent message in `family-agent/.co/logs/` is how you know they used it. Don't paste those lines anywhere.
@@ -85,7 +96,7 @@ Both keep `.co/` (identity, conversations, logs).
 
 The parent reads these aloud during the call script; write them down with the 「电话里顺手记下」 list after step 8 of INSTALL.zh-CN.md. A later round puts his words in place of the 待核对 marks.
 
-3. Confirm the Huawei dialog wording in `INSTALL.zh-CN.md` as the parent reads it (纯净模式, 允许安装应用, 风险应用), three buttons at the bottom or none (27c), and the HarmonyOS version (step 0). Open the app once and watch the title: 「小乐(连接中…)」, then 「小乐」, nothing red (if the strip says 还没连上 instead, the packed code is not the one in `~/.co/keys.env`: re-pack, or `co env set CO_INVITE_CODE` to the packed one and `co host --background`). Whether 小乐's reply made a sound during the call (27i, step 6).
+3. Confirm the Huawei dialog wording in `INSTALL.zh-CN.md` as the parent reads it (纯净模式, 允许安装应用, 风险应用), three buttons at the bottom or none (27c), and the HarmonyOS version (step 0). Open the app once and watch the title: 「小乐(连接中…)」, then 「小乐」, nothing red (if the strip asks for a fresh ticket instead, check the ticket use/expiry in `.co/tickets.json` and follow the smoke-test recovery step; for a legacy packed APK, check `CO_INVITE_CODE`). Whether 小乐's reply made a sound during the call (27i, step 6).
 
 ### Next time the phone is in your hand
 

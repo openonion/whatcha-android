@@ -20,6 +20,7 @@ class AgentLink(
     private val listener: Listener,
     // Saved by the caller, so a relaunched app picks up the session its unanswered message went into.
     private var sessionId: String? = null,
+    private val dispatch: (() -> Unit) -> Unit = { it() },
 ) : WebSocketListener() {
 
     interface Listener {
@@ -30,13 +31,14 @@ class AgentLink(
         fun onError(message: String)
         /** The host no longer knows this phone (it restarted); CONNECT has been sent again. */
         fun onRejected()
-        /** The host will not take this phone's invite code (wrong, or none packed); nothing more is sent. */
+        /** The host will not take this phone's invite code (wrong, expired, used, or absent); nothing more is sent. */
         fun onRefused()
         fun onDisconnected(reason: String)
     }
 
     private val client = OkHttpClient.Builder().pingInterval(30, TimeUnit.SECONDS).build()
     private var socket: WebSocket? = null
+    @Volatile private var closed = false
 
     fun open() {
         socket = client.newWebSocket(Request.Builder().url("${pairing.relay}/ws/input").build(), this)
@@ -47,29 +49,40 @@ class AgentLink(
         socket?.cancel()
     }
 
+    /** A replaced link must not report a late refusal or disconnect to the new pairing. */
+    fun close() {
+        closed = true
+        socket?.cancel()
+    }
+
+    private fun report(event: Listener.() -> Unit) = dispatch { if (!closed) listener.event() }
+
     /** False when there is no open socket; the caller keeps the message and retries after reconnecting. */
     fun send(prompt: String, voice: Voice?, photo: ByteArray?): Boolean = socket?.send(wire.input(prompt, voice, photo)) ?: false
 
     override fun onOpen(webSocket: WebSocket, response: Response) {
+        if (closed) return
         webSocket.send(wire.connect(sessionId))
     }
 
     override fun onMessage(webSocket: WebSocket, text: String) {
+        if (closed) return
         val frame = Json.parseToJsonElement(text).jsonObject
         when (frame.string("type")) {
             "CONNECTED" -> {
-                sessionId = frame.string("session_id") ?: sessionId
-                listener.onConnected(sessionId!!, frame.string("status") == "running", frame.history())
+                val connectedSession = frame.string("session_id") ?: sessionId!!
+                sessionId = connectedSession
+                report { onConnected(connectedSession, frame.string("status") == "running", frame.history()) }
             }
             "ONBOARD_REQUIRED" -> onboard(webSocket)
-            "AGENT_PROFILE" -> frame.string("name")?.let(listener::onProfile)
+            "AGENT_PROFILE" -> frame.string("name")?.let { report { onProfile(it) } }
             "PING" -> webSocket.send(wire.pong())
-            "OUTPUT" -> listener.onReply(frame.string("result").orEmpty())
+            "OUTPUT" -> report { onReply(frame.string("result").orEmpty()) }
             "ERROR" -> onError(webSocket, frame.string("message").orEmpty())
         }
     }
 
-    // The agent has not met this phone yet: present the invite code packed into the APK, if the pack had one.
+    // The agent has not met this phone yet: present the copied ticket token or legacy packed invite.
     private fun onboard(webSocket: WebSocket) {
         val invite = pairing.invite ?: return refused(webSocket)
         webSocket.send(wire.onboard(invite))
@@ -77,25 +90,27 @@ class AgentLink(
 
     // The relay keeps a refused socket open, so drop it here: onFailure then schedules the retry that picks up a corrected host.
     private fun refused(webSocket: WebSocket) {
-        listener.onRefused()
+        report { onRefused() }
         webSocket.cancel()
     }
 
     private fun onError(webSocket: WebSocket, message: String) {
         if (message.startsWith(INVITE_REFUSED)) return refused(webSocket)
-        if (!message.startsWith(HOST_FORGOT_US)) return listener.onError(message)
+        if (!message.startsWith(HOST_FORGOT_US)) return report { onError(message) }
         webSocket.send(wire.connect(sessionId))
-        listener.onRejected()
+        report { onRejected() }
     }
 
     override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+        if (closed) return
         socket = null
-        listener.onDisconnected(t.toString())
+        report { onDisconnected(t.toString()) }
     }
 
     override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+        if (closed) return
         socket = null
-        listener.onDisconnected("closed $code $reason")
+        report { onDisconnected("closed $code $reason") }
     }
 }
 
