@@ -1,6 +1,6 @@
 # Runbook: run 小乐 for one family
 
-Read this file and INSTALL.zh-CN.md from the `wechat-look` branch, or from the tag you build: [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md), [v0.1.8](https://github.com/openonion/whatcha-android/blob/v0.1.8/RUNBOOK.md). `main` is older and builds v0.1.0.
+Read this file and INSTALL.zh-CN.md from the `wechat-look` branch, or from the tag you build: [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md), [v0.1.9](https://github.com/openonion/whatcha-android/blob/v0.1.9/RUNBOOK.md). `main` is older and builds v0.1.0.
 
 Everything here runs on the child's Mac, from a checkout of this repo. The agent is the `~/.co` identity of that Mac.
 
@@ -36,7 +36,7 @@ python3 tools/pack.py app/build/outputs/apk/debug/app-debug.apk whatcha-family.a
 "$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)"/aapt2 dump badging whatcha-family.apk | grep -o "version[CN][a-z]*='[^']*'"
 ```
 
-The last line reads the version from the packed APK itself, not from the checkout. It must print the tag's version, `versionName='0.1.8'` (and `versionCode='9'`) for v0.1.8. If it prints `0.1.0`, stop: you are on an old checkout.
+The last line reads the version from the packed APK itself, not from the checkout. It must print the tag's version, `versionName='0.1.9'` (and `versionCode='10'`) for v0.1.9. If it prints `0.1.0`, stop: you are on an old checkout.
 
 The invite code lives in `~/.co/keys.env`, not in `family-agent/.env`: `co host` 1.9.3rc40 hands the agent the code from `keys.env` before it reads the project's `.env`, so a code written only in `.env` is refused while `keys.env` has one. `co init` already wrote one there; the second half of that line only runs when it did not.
 
