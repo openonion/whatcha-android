@@ -12,7 +12,7 @@ from urllib.request import urlopen
 
 from nacl.signing import SigningKey
 
-TICKET_SECONDS = 24 * 60 * 60
+TICKET_SECONDS = 7 * 24 * 60 * 60
 
 
 def read_tickets(co_dir):
@@ -35,17 +35,18 @@ def edit_tickets(co_dir):
 
 
 def ticket_available(record, now):
-    return record["used_at"] is None and 0 <= now - record["created_at"] < TICKET_SECONDS
+    unused = record.get("reusable") or record["used_at"] is None
+    return unused and 0 <= now - record["created_at"] < TICKET_SECONDS
 
 
-def issue_ticket(co_dir, address, label):
+def issue_ticket(co_dir, address, label, reusable=False):
     agent = bytes.fromhex(address.removeprefix("0x"))
     if len(agent) != 32:
         raise ValueError("agent address must contain 32 bytes")
     token = secrets.token_bytes(12)
     code = base64.urlsafe_b64encode(token).decode().rstrip("=")
     with edit_tickets(co_dir) as records:
-        records[code] = {"label": label, "created_at": time.time(), "used_at": None}
+        records[code] = {"label": label, "created_at": time.time(), "used_at": None, "reusable": reusable}
     payload = base64.urlsafe_b64encode(agent + token).decode().rstrip("=")
     return f"「在干嘛」家人口令 #WC1.{payload}#\n长按这条消息，点「复制」，再打开「在干嘛」"
 
@@ -54,6 +55,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("label")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--reusable", action="store_true", help="admit any number of phones, e.g. for App Review")
     args = parser.parse_args()
     co_dir = Path(__file__).resolve().parent / ".co"
     key_path = co_dir / "keys" / "agent.key"
@@ -66,7 +68,7 @@ def main():
         address = json.load(response)["address"]
     if address != "0x" + bytes(key.verify_key).hex():
         parser.error("This port serves a different agent. Start this project's host on its own port and use the same --port here.")
-    print(issue_ticket(co_dir, address, args.label))
+    print(issue_ticket(co_dir, address, args.label, args.reusable))
 
 
 if __name__ == "__main__":

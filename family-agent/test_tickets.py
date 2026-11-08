@@ -62,7 +62,27 @@ def test_refuse_second_use_after_restart(family):
     assert restarted.should_allow(CLIENT).allow
 
 
-@pytest.mark.parametrize("age", [86400, 86401])
+def test_week_old_ticket_still_admits(family):
+    co_dir, trust, _ = family
+    token = issue(family)
+    path = co_dir / "tickets.json"
+    records = json.loads(path.read_text())
+    records[token]["created_at"] = time.time() - 6 * 86400
+    path.write_text(json.dumps(records))
+    assert trust.verify_invite(CLIENT, token)
+
+
+def test_reusable_ticket_admits_every_phone(family):
+    co_dir, trust, ticket = family
+    message = ticket.issue_ticket(co_dir, ADDRESS, "App Review", reusable=True)
+    raw = base64.urlsafe_b64decode(message.split("#WC1.")[1].split("#")[0] + "=")
+    token = base64.urlsafe_b64encode(raw[32:]).decode().rstrip("=")
+    assert trust.verify_invite(CLIENT, token)
+    assert trust.verify_invite(OTHER, token)
+    assert trust.get_level(OTHER) == "contact"
+
+
+@pytest.mark.parametrize("age", [7 * 86400, 7 * 86400 + 1])
 def test_refuse_expired(family, age):
     co_dir, trust, _ = family
     token = issue(family)
@@ -192,7 +212,7 @@ def test_connect_offers_door_then_submit_refuses(family, state):
     if state == "expired":
         path = co_dir / "tickets.json"
         records = json.loads(path.read_text())
-        records[token]["created_at"] -= 86400
+        records[token]["created_at"] -= 7 * 86400
         path.write_text(json.dumps(records))
     if state == "unknown":
         token = "unknown"

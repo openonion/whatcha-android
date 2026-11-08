@@ -18,7 +18,7 @@ What works today:
 
 - **Pairing by a copied family ticket.** The child sends a 口令 in WeChat. The parent long-presses it, copies it, and opens the app. It pairs automatically, with a large 我复制好了 button if the phone blocks the automatic read. New APKs carry no family secret. A refused pairing can take a fresh ticket until the first accepted connection; after that, pairing is permanent. Older packed APKs still work.
 - **Silent identity.** The phone makes its own Ed25519 key on first launch.
-- **One-use onboarding.** A ticket is valid for 24 hours and admits one phone as a contact. The agent keeps the family label with the joined address; a contact reconnects without using the ticket again.
+- **One-use onboarding.** A ticket is valid for seven days and admits one phone as a contact (a `--reusable` review ticket admits any number). The agent keeps the family label with the joined address; a contact reconnects without using the ticket again.
 - **A WeChat-style chat.** Green and white bubbles with tails, avatars on both sides, grey time lines, and a green 发送 that appears once there is text. The agent's name, set in its `host.yaml`, is the title. While the agent is writing, the title reads 对方正在输入..., as in WeChat.
 - **An icon parents can find.** A white chat bubble on WeChat green.
 - **An empty chat says what to do:** 「想知道孩子在干嘛，就在下面问小乐，打字说话都行」.
@@ -40,7 +40,7 @@ child's agent ── ticket.py ──> WeChat 口令 ── copy ──> parent'
 
 1. The child starts the family agent, then runs `"$(dirname "$(readlink -f "$(which co)")")/python" ticket.py 妈妈` from `family-agent/` (add `--port 8123` if that is the host port). The command reads the running host's address from local `/info`, checks it against the host's identity (project `.co/keys/agent.key` if present, otherwise `~/.co/keys/agent.key`), saves a random ticket in `.co/tickets.json`, and prints the two-line message to send in WeChat.
 2. The parent installs the ordinary APK, long-presses the message in WeChat, taps Copy, and opens 在干嘛. At launch and every return to the foreground, an unpaired app looks for the 口令 in the clipboard. An unrelated clipboard changes nothing.
-3. The app saves the address and token, connects through the relay, and submits the token as its invite code. The agent checks that it is unused and under 24 hours old, records the label and joined address, and promotes the phone to contact. Tickets created while the host is running work without a restart.
+3. The app saves the address and token, connects through the relay, and submits the token as its invite code. The agent checks that it is unused and under seven days old, records the label and joined address, and promotes the phone to contact. Tickets created while the host is running work without a restart.
 4. A new phone or a reinstall that lost its identity needs a fresh ticket. An existing contact reconnects normally. The app remembers a pending pairing across restarts. If refused, copying a fresh ticket or tapping 我复制好了 replaces it and connects immediately. The first `CONNECTED` saves `accepted=true`; an accepted pairing never changes. Older saved pairings without the flag and with chat history are marked accepted on load; those without history gain it on their next connection.
 
 `tools/pack.py` remains the legacy path for older APKs that carry a shared invite code in the APK Signing Block. The existing `CO_INVITE_CODE` door is kept for those phones.

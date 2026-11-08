@@ -15,7 +15,7 @@ sys.path.insert(0, str(HERE.parent / "skills/xiaole"))
 
 
 class FamilyTrust(TrustAgent):
-    """Keep legacy invites, and admit each family ticket once."""
+    """Keep legacy invites, and admit each family ticket once (review tickets: any number of times)."""
 
     @property
     def config(self):
