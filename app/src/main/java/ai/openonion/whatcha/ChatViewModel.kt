@@ -1,12 +1,15 @@
 package ai.openonion.whatcha
 
 import android.app.Application
+import android.content.ClipboardManager
+import android.media.AudioManager
 import android.net.Uri
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +19,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.Locale
 
-enum class Status { UNPAIRED, CONNECTING, ONLINE, OFFLINE }
+enum class Status { UNPAIRED, CONNECTING, ONLINE, OFFLINE, REFUSED }
 
 // Like a second tap on a WeChat voice message: tapping the reply being read stops it.
 internal fun tapStops(speaking: String?, tapped: String): Boolean = speaking == tapped
@@ -25,17 +28,38 @@ internal fun tapStops(speaking: String?, tapped: String): Boolean = speaking == 
 // must not open a TLS connection every 5 s.
 internal fun nextDelay(previous: Long): Long = minOf(previous * 2, 60_000L)
 
+// Coming back to the screen skips the rest of a wait: the parent is looking now, and the wait may be a whole minute.
+// Only while a retry is waiting; a try already under way is left to finish, so there is never a second socket.
+// Refused tickets and legacy packed codes wait for a fresh paste, unless this phone was already accepted.
+internal fun retryNow(status: Status, waiting: Boolean, accepted: Boolean = false): Boolean =
+    waiting && status != Status.ONLINE && (status != Status.REFUSED || accepted)
+
+// The parent who comes back while it waits sees what a cold open shows: 连接中 in the title, nothing red.
+// REFUSED keeps its strip, because the child must check the ticket. A failed try puts the strip back (onDisconnected).
+internal fun shownOnReturn(status: Status): Status = if (status == Status.OFFLINE) Status.CONNECTING else status
+
+// A try the relay accepted but the Mac never answered (asleep, still listed) hung ~5 min in round 30. Past this,
+// with no CONNECTED, the socket is dropped and onDisconnected shows the strip and keeps the schedule.
+// 10 s: just over twice the slowest good try (4.5 s), and OkHttp's connect timeout.
+internal const val CONNECT_DEADLINE_MS = 10_000L
+
+internal fun giveUpTry(status: Status): Boolean = status != Status.ONLINE
+
 /** The one conversation on this phone. Keeps it on disk, reads replies aloud, reconnects on its own. */
 class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listener {
 
     private val prefs = app.getSharedPreferences("chat", 0)
-    private val pairing = loadPairing(app)
-    private val link = pairing?.let { AgentLink(it, Wire(Identity.load(app), it.agent), this, prefs.getString("session", null)) }
+    private val _pairing = MutableStateFlow(loadPairing(app))
+    val pairing: StateFlow<Pairing?> = _pairing
+    private var link = _pairing.value?.let(::makeLink)
     private val voice = TextToSpeech(app) { }
     private var spoken: String? = null
     private val recorder = Recorder(app)
+    private val audio = app.getSystemService(AudioManager::class.java)
     private val player = Player()
     private var reconnectDelay = RECONNECT_DELAY_MS
+    private var retry: Job? = null
+    private var deadline: Job? = null
 
     private val _lines = MutableStateFlow(loadLines())
     val lines: StateFlow<List<Line>> = _lines
@@ -54,9 +78,40 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     val recording: StateFlow<Boolean> = _recording
 
     init {
-        Log.i(TAG, "address=${Identity.load(app).address} agent=${pairing?.agent}")
+        Log.i(TAG, "address=${Identity.load(app).address} agent=${_pairing.value?.agent}")
         _lines.value.staleVoices(System.currentTimeMillis()).forEach { File(it).delete() }
-        link?.open()
+        open()
+    }
+
+    private fun makeLink(pairing: Pairing) = AgentLink(
+        pairing, Wire(Identity.load(getApplication()), pairing.agent), this, prefs.getString("session", null),
+        dispatch = ::onMain,
+    )
+
+    private val _pairingHint = MutableStateFlow<String?>(null)
+    val pairingHint: StateFlow<String?> = _pairingHint
+
+    /** Any pending pairing can take a fresh ticket; only a button tap explains a failed paste. */
+    fun pastePairing(fromButton: Boolean = false) {
+        val current = _pairing.value
+        if (!canPastePairing(current, _status.value)) return
+        val clipboard = getApplication<Application>().getSystemService(ClipboardManager::class.java)
+        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
+        val found = pairingAfterPaste(current, _status.value, text)
+        if (fromButton || found != current) {
+            _pairingHint.value = pairingPasteHint(current, _status.value, text, fromButton)
+        }
+        if (found == null || found == current) return
+        retry?.cancel()
+        deadline?.cancel()
+        link?.close()
+        prefs.edit().remove("session").apply()
+        savePairing(getApplication(), found)
+        _pairing.value = found
+        link = makeLink(found)
+        reconnectDelay = RECONNECT_DELAY_MS
+        _status.value = Status.CONNECTING
+        open()
     }
 
     fun send(text: String) {
@@ -69,6 +124,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         _voiceMode.value = on
         prefs.edit().putBoolean("voiceMode", on).apply()
     }
+
+    /** Whether this parent has ever said No to the microphone; it tells Back on the first question from "don't ask again". */
+    val saidNoToMic get() = prefs.getBoolean("saidNoToMic", false)
+
+    fun rememberSaidNoToMic() = prefs.edit().putBoolean("saidNoToMic", true).apply()
+
+    /** A phone or WeChat call is holding the microphone; a recording now would be silence. Needs no permission. */
+    val callHasMic get() = callHasMic(audio.mode, audio.activeRecordingConfigurations.map { it.clientAudioSource })
 
     fun startRecording() {
         voice.stop()
@@ -131,25 +194,33 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         voice.speak(text, TextToSpeech.QUEUE_FLUSH, null, text.hashCode().toString())
     }
 
-    // OkHttp calls back on its own thread; the conversation is only ever changed on the main thread.
-    override fun onConnected(sessionId: String, running: Boolean) = onMain {
-        Log.i(TAG, "connected session=$sessionId running=$running")
+    // AgentLink delivers events on the main thread, only while that link is still current.
+    override fun onConnected(sessionId: String, running: Boolean, history: List<Pair<Boolean, String>>) {
+        // The count only: the items are the family's conversation.
+        Log.i(TAG, "connected session=$sessionId running=$running history=${history.size}")
+        val current = _pairing.value!!
+        if (!current.accepted) {
+            val accepted = current.afterConnected()
+            savePairing(getApplication(), accepted)
+            _pairing.value = accepted
+        }
         prefs.edit().putString("session", sessionId).apply()
-        save(_lines.value.afterReconnect(running))
+        save(_lines.value.afterReconnect(running, history, System.currentTimeMillis()))
+        deadline?.cancel()
         reconnectDelay = RECONNECT_DELAY_MS
         _status.value = Status.ONLINE
         sendQueued()
     }
 
-    override fun onRejected() = onMain {
+    override fun onRejected() {
         Log.w(TAG, "host forgot this phone; reconnecting")
         save(_lines.value.requeueSent())
     }
 
-    // Still retried by onDisconnected, slower and slower: a host whose code is corrected picks the phone up untouched.
-    override fun onRefused() = onMain {
+    // Pending tickets and legacy packed codes stop here until a fresh paste; accepted parents keep retrying.
+    override fun onRefused() {
         Log.w(TAG, "host refused this phone's invite code")
-        _status.value = Status.UNPAIRED
+        _status.value = Status.REFUSED
     }
 
     override fun onProfile(name: String) {
@@ -157,7 +228,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         prefs.edit().putString("title", name).apply()
     }
 
-    override fun onReply(text: String) = onMain {
+    override fun onReply(text: String) {
         Log.i(TAG, "reply ${text.length} chars")
         save(_lines.value.answerOldest())
         append(Line(fromParent = false, text = text, at = System.currentTimeMillis()))
@@ -165,25 +236,49 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         sendQueued()
     }
 
-    override fun onError(message: String) = onMain {
+    override fun onError(message: String) {
         Log.w(TAG, "agent error: $message")
         save(_lines.value.failOldest(message))
         sendQueued()
     }
 
-    // Stays OFFLINE (or UNPAIRED) while retrying: the strip must not change on every try. onConnected sets ONLINE
+    // Stays OFFLINE (or REFUSED for an accepted pairing) while retrying: the strip must not change on every try. onConnected sets ONLINE
     // and puts the wait back to 5 s; 5, 10, 20, 40, 60, 60… s until then.
-    override fun onDisconnected(reason: String) = onMain {
+    override fun onDisconnected(reason: String) {
         Log.w(TAG, "disconnected: $reason")
-        if (_status.value != Status.UNPAIRED) _status.value = Status.OFFLINE
-        viewModelScope.launch {
+        deadline?.cancel()
+        if (_status.value != Status.REFUSED) _status.value = Status.OFFLINE
+        if (!retryNow(_status.value, waiting = true, accepted = _pairing.value?.accepted == true)) return
+        retry = viewModelScope.launch {
             delay(reconnectDelay)
             reconnectDelay = nextDelay(reconnectDelay)
-            link?.open()
+            open()
+        }
+    }
+
+    /** The app is on the screen again: 连接中 while this try runs. The wait is not reset: if the try fails, the strip
+     *  and the slow schedule carry on. */
+    fun cameBack() {
+        if (!retryNow(_status.value, retry?.isActive == true, accepted = _pairing.value?.accepted == true)) return
+        Log.i(TAG, "back on screen; retrying now")
+        retry?.cancel()
+        _status.value = shownOnReturn(_status.value)
+        open()
+    }
+
+    // Every try, first launch, scheduled or on return, gets the same deadline; a dropped socket ends in onDisconnected.
+    private fun open() {
+        link?.open() ?: return
+        deadline = viewModelScope.launch {
+            delay(CONNECT_DEADLINE_MS)
+            if (!giveUpTry(_status.value)) return@launch
+            Log.w(TAG, "no CONNECTED in ${CONNECT_DEADLINE_MS / 1000} s; giving up this try")
+            link?.drop()
         }
     }
 
     override fun onCleared() {
+        link?.close()
         voice.shutdown()
         player.stop()
     }

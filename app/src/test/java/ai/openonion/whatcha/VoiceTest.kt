@@ -1,5 +1,11 @@
 package ai.openonion.whatcha
 
+import android.media.AudioManager.MODE_IN_CALL
+import android.media.AudioManager.MODE_IN_COMMUNICATION
+import android.media.AudioManager.MODE_NORMAL
+import android.media.AudioManager.MODE_RINGTONE
+import android.media.MediaRecorder.AudioSource.MIC
+import android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -67,17 +73,68 @@ class VoiceTest {
 
     @Test
     fun allowingTheMicrophoneSwitchesToHoldToTalk() {
-        assertEquals(MicStep.TALK, afterMicAnswer(granted = true, canAskAgain = false))
-        assertEquals(MicStep.TALK, afterMicAnswer(granted = true, canAskAgain = true))
+        for (rationale in listOf(false, true)) for (saidNoBefore in listOf(false, true))
+            assertEquals(MicStep.TALK, afterMicAnswer(granted = true, rationale = rationale, saidNoBefore = saidNoBefore))
+    }
+
+    @Test
+    fun backOnTheFirstQuestionAsksAgainInsteadOfOpeningSettings() {
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, rationale = false, saidNoBefore = false))
     }
 
     @Test
     fun aFirstNoIsAskedAgainNextTime() {
-        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, canAskAgain = true))
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, rationale = true, saidNoBefore = false))
     }
 
     @Test
-    fun aNoTheSystemWillNotAskAgainOpensTheSettingsPage() {
-        assertEquals(MicStep.OPEN_SETTINGS, afterMicAnswer(granted = false, canAskAgain = false))
+    fun aNoAfterAnEarlierNoThatTheSystemWillStillAskIsAskedAgain() {
+        assertEquals(MicStep.ASK_AGAIN, afterMicAnswer(granted = false, rationale = true, saidNoBefore = true))
+    }
+
+    @Test
+    fun aSecondNoShowsWhereToTap() {
+        assertEquals(MicStep.OPEN_SETTINGS, afterMicAnswer(granted = false, rationale = false, saidNoBefore = true))
+    }
+
+    @Test
+    fun theDialogSaysWhereToTapInThePhonesOwnWords() {
+        assertTrue(MIC_SETTINGS_STEPS.contains("录音"))
+        assertTrue(MIC_SETTINGS_STEPS.contains("权限 →\n麦克风 → 允许"))
+        assertTrue(MIC_ASK_AGAIN.contains("录音"))
+        assertFalse(MIC_ASK_AGAIN.contains("麦克风"))
+    }
+
+    @Test
+    fun theDialogLinesStayWholeAtTheLargestFont() {
+        // At font 2.0 the 272dp body holds 8 full-width characters; count a space or an arrow as one to be safe.
+        for (line in MIC_SETTINGS_STEPS.lines()) assertTrue(line, line.length <= 8)
+        assertTrue(MIC_SETTINGS_STEPS.contains("按到聊天出来"))
+    }
+
+    @Test
+    fun aPhoneCallHasTheMic() {
+        assertTrue(callHasMic(MODE_IN_CALL, emptyList()))
+    }
+
+    @Test
+    fun aWeChatStyleCallHasTheMic() {
+        assertTrue(callHasMic(MODE_IN_COMMUNICATION, emptyList()))
+    }
+
+    @Test
+    fun aCallAppRecordingWithoutSettingTheModeHasTheMic() {
+        assertTrue(callHasMic(MODE_NORMAL, listOf(VOICE_COMMUNICATION)))
+    }
+
+    @Test
+    fun theWakeWordListenerDoesNotBlockTalking() {
+        assertFalse(callHasMic(MODE_NORMAL, listOf(1999 /* HOTWORD, hidden */, MIC)))
+        assertFalse(callHasMic(MODE_RINGTONE, emptyList()))
+    }
+
+    @Test
+    fun theCallWordsFitOnEightCharacterLines() {
+        for (line in MIC_IN_CALL.lines()) assertTrue(line, line.length <= 8)
     }
 }

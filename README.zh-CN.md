@@ -23,7 +23,7 @@
 - **爸妈找得到的图标。** 微信绿底上一个白色对话气泡。
 - **空聊天会告诉爸妈怎么用：**「想知道孩子在干嘛，就在下面问小乐，打字说话都行」。
 - **从相册发照片。** 输入框右边的 ⊕ 和微信在同一个位置，点开相册选一张，手机先把照片缩到最长边 1280 像素再发出去，显示成爸妈自己的图片气泡，发送中的灰圈和失败的红色感叹号跟文字一样。小乐看到的是照片本身，会说照片里有什么。点一下图片就全屏看大图，再点一下或者按返回就回到聊天。不要新权限；拍照是下一步。
-- **按住说话。** 跟微信一样，输入框左边的圆按钮切换到「按住 说话」，松开就把录音原样发出去，agent 收到后自己转成文字。按不到一秒的不发，提示「说话时间太短」。点一下语音就能播放。麦克风被拒绝了，app 会说怎么办并打开手机的权限页；没有权限时按住说话会再问一次，不会去录音。
+- **按住说话。** 跟微信一样，输入框左边的圆按钮切换到「按住 说话」，松开就把录音原样发出去，agent 收到后自己转成文字。按不到一秒的不发，提示「说话时间太短」。点一下语音就能播放。录音被拒绝两次后，会出一个大字框写着去哪儿点，点「去设置」才打开权限页；打开了按返回回来，按钮已经是「按住 说话」。在系统的询问上按返回不算拒绝，下次再问。没有权限时按住说话会再问一次，不会去录音。
 - **消息不会丢。** 断线时写的消息会等着，旁边转着一个灰色小圈表示还在路上，agent 回来（包括 agent 重启）后自动发出去。回复还在路上时手机把 app 杀了，下次打开会接上原来的对话，回复照样收到。
 - **出错说人话。** agent 出错时，那条消息旁边出现红色感叹号，消息下面出一行灰字说明，不让爸妈一直干等；点一下感叹号就再发一次，发出去了灰字就消失。
 - **最新一句总在眼前**，字体调多大、键盘开着都一样；往上翻了多远，一发消息或小乐一回话，就自己回到最下面。
@@ -69,10 +69,10 @@
 app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill 决定：[`skills/xiaole/SKILL.md`](skills/xiaole/SKILL.md)。[`family-agent/agent.py`](family-agent/agent.py) 就地加载它和下面的工具；要给别的 agent 用，复制到那个 agent 的 `.co/skills/xiaole/` 即可。它要求 agent：
 
 - 直说自己是 AI，从不以子女的口吻说话；
-- 只讲真实发生的事，不知道就说「我帮你问问」；
+- 只讲真实发生的事，不知道就说「我跟他说一声」，让他自己告诉爸妈；
 - 钱、身体、感情、名字留给子女自己说：先说一件真实的工作上的事，再说这得他自己讲，每次说法不一样；
 - 对爸妈两个人说「你们」，从不说「您」；开场只说一句「叔叔阿姨好，我是小乐，你儿子请的 AI。」，说一次；
-- 爸妈说了让人担心的事，马上告诉子女；
+- 爸妈说了让人担心的事，马上告诉子女（子女 Mac 上弹一条通知）；
 - 收到语音先转成文字再回答；没录上声音就请爸妈再说一遍；
 - 爸妈发来照片，暖暖地说看到了什么，绝不说孩子已经看过；
 - 只说 app 能做到的事（打字、按住说话、从相册发照片、点回复重听），不说「我给你打电话」「给你发张照片」。
@@ -81,7 +81,9 @@ app 只是爸妈那一端。小乐说什么，由子女 agent 上的一个 skill
 
 回答「在干嘛」需要 agent 能读子女的笔记本：把 [`skills/xiaole/rem.py`](skills/xiaole/rem.py) 复制到 `agent.py` 旁边，传它的三个工具 `recent_sessions`、`show_page`、`search_notebook`。它们读 `co rem` 的笔记本（`~/.co/rem`，或 `REM_ROOT`），把页面原样交给 agent；skill 只从中取工作的部分，钱、身体、感情、名字不说。
 
-这个 skill 带一套测试：[`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml)，配一个虚构的笔记本 [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/)，里面把修好的 bug 和逾期发票、没睡够、吵架、客户和店和合伙人的中英文名字放在一起，专门测这些坑。把 yaml 复制到你 agent 的 `.co/benchmarks/`，改 skill 前后各跑一次 `co eval run xiaole --agent skills/xiaole/benchmark/agent.py`，用 `co` 自己跑在的那个 Python（`co doctor` 的 Python Path）；`python skills/xiaole/benchmark/empty_check.py` 查空笔记本时的回答，`memory_check.py` 查第二句不再自我介绍，`python skills/xiaole/benchmark/report_check.py <run>/report.json` 读整轮回复，查有没有踩坑的词、转告、您、满意，长度（中位数 52 以内，没有超过 65 的），以及没有哪条绕开的回答被拿来答两个不同的问题。
+要兑现「我跟他说一声」，把 [`skills/xiaole/child.py`](skills/xiaole/child.py) 复制到 `agent.py` 旁边，传 `tell_child`：它在运行 host 的那台 Mac 上弹一条标题为小乐的 macOS 通知，内容是爸妈的话（开着专注模式时不弹横幅，只进通知中心），host 日志里的这次工具调用就是记录；`co eval` 不加 `--live` 时不弹。
+
+这个 skill 带一套测试：[`skills/xiaole/benchmark/xiaole.yaml`](skills/xiaole/benchmark/xiaole.yaml)，配一个虚构的笔记本 [`skills/xiaole/benchmark/notebook/`](skills/xiaole/benchmark/notebook/)，里面把修好的 bug 和逾期发票、没睡够、吵架、客户和店和合伙人的中英文名字放在一起，专门测这些坑。把 yaml 复制到你 agent 的 `.co/benchmarks/`，改 skill 前后各跑一次 `co eval run xiaole --agent skills/xiaole/benchmark/agent.py`，用 `co` 自己跑在的那个 Python（`co doctor` 的 Python Path）；`python skills/xiaole/benchmark/empty_check.py` 查空笔记本时的回答，`memory_check.py` 查后面几句不再自我介绍、不许诺回头再报，`python skills/xiaole/benchmark/report_check.py <run>/report.json` 读整轮回复，查有没有踩坑的词、转告、您、满意，长度（中位数 52 以内，没有超过 65 的），以及没有哪条绕开的回答被拿来答两个不同的问题。
 
 ## 设计规矩
 

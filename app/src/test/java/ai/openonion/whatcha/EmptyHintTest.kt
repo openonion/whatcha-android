@@ -16,8 +16,9 @@ class EmptyHintTest {
     }
 
     @Test
-    fun anUnpairedEmptyChatTellsTheParentToCallTheChild() {
-        assertEquals("给孩子打个电话", emptyHint("小乐", emptyList(), Status.UNPAIRED))
+    fun anUnpairedEmptyChatExplainsCopyAndReturn() {
+        assertEquals("请孩子在微信里发来口令，\n长按复制，再回到这里", emptyHint("小乐", emptyList(), Status.UNPAIRED))
+        assertEquals("请孩子在微信里发来口令，\n长按复制，再回到这里", emptyHint("小乐", emptyList(), Status.REFUSED))
     }
 
     @Test
