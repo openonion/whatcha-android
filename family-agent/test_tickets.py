@@ -35,10 +35,13 @@ def issue(family):
     return base64.urlsafe_b64encode(raw[32:]).decode().rstrip("=")
 
 
-def test_accept_once_and_remember_label(family):
+def test_accept_once_and_remember_label(family, capsys):
     co_dir, trust, _ = family
     token = issue(family)
     assert trust.verify_invite(CLIENT, token)
+    output = capsys.readouterr().out
+    assert f"✓ 妈妈 joined: {CLIENT[:16]}..." in output
+    assert token not in output
     assert trust.get_level(CLIENT) == "contact"
     record = json.loads((co_dir / "tickets.json").read_text())[token]
     assert record["label"] == "妈妈"

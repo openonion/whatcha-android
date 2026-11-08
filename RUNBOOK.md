@@ -37,7 +37,7 @@ cp app/build/outputs/apk/debug/app-debug.apk whatcha.apk
 
 Send the ordinary `whatcha.apk` and the two-line ticket message to the parent in WeChat. Run the ticket command once per family member, using their family label. It prints only the message to copy. It reads the running host's address from `http://localhost:8000/info`, so start the host first. For another host port, use `python ticket.py 妈妈 --port 8123`. Tickets live in the gitignored `family-agent/.co/tickets.json`; each is valid for 24 hours and one phone. Create another ticket for a new phone or an app reinstall that lost its identity. No host restart is needed after creating a ticket.
 
-After joining, the same record contains `label`, `address`, and `used_at`: this is where the child can see which family member joined. Keep this file private. Do not send its contents or paste tickets into logs.
+After joining, the same record contains `label`, `address`, and `used_at`: this is where the child can see which family member joined; the host output also shows `✓ 妈妈 joined` with the address prefix. Keep this file private. Do not send its contents or paste tickets into logs.
 
 The last build command checks the APK's version. It must print `versionName='0.1.9'` and `versionCode='10'`; `0.1.0` means an old checkout.
 

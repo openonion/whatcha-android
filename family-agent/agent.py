@@ -45,7 +45,7 @@ class FamilyTrust(TrustAgent):
                 return False
             self.promote_to_contact(client_id)
             record.update(address=client_id, used_at=now)
-            self.logger.info("%s joined: %s", record["label"], client_id)
+            print(f"✓ {record['label']} joined: {client_id[:16]}...")
             return True
 
 
