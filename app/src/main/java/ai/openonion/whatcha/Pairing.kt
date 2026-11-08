@@ -29,6 +29,7 @@ internal fun pairingPasteHint(current: Pairing?, status: Status, text: String, f
     !fromButton || !canPastePairing(current, status) -> null
     pairingAfterPaste(current, status, text) != current -> null
     current != null && status == Status.REFUSED && parsePairing(text) == current -> "这条口令用过了，请孩子重新发一条"
+    current != null && parsePairing(text) == current -> "这条口令收到了，正在连接，请稍等"
     else -> "没找到口令。回微信长按孩子发的那条，点「复制」，再回来"
 }
 

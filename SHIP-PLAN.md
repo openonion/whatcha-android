@@ -640,3 +640,10 @@ Sprint 3 walked the release candidate on an emulator (zh-CN, font scale 1.3) aga
 - **Ticket for the wrong agent.** `ticket.py` made a ticket for whatever answered on :8000. It now derives the expected address the way the host chooses its key (this project's `.co/keys/agent.key`, else `~/.co/keys/agent.key`) and refuses with one line if `/info` differs. RUNBOOK runs it with co's own Python (macOS has no `python`) and covers another project already serving :8000: start this host on its own port and pass the same `--port`.
 - **INSTALL.zh-CN.md.** Button name, the empty-clipboard sentence, the stock Android microphone choice (Huawei wording still to confirm), reconnection once the child's Mac is awake, the recovery paragraph in Chinese, and a fresh-ticket step for a long 暂时联系不上 right after setup.
 - **Checks.** 118 app unit tests and 17 family-agent tests, 0 failures; APK `versionCode='11'`, `versionName='0.2.0'`. Still open: the Huawei phone itself, and the clipboard read on a phone that blocks it (both the automatic read and the button use the same clipboard API).
+
+### v0.2.1 · 2026-11-09
+
+- **Tickets last a week.** Parents are slow; a 24-hour ticket often expired before they opened the app. A ticket now admits one phone within seven days. A running host picks this up on its next restart.
+- **Review ticket.** `ticket.py "App Review" --reusable` admits any number of phones for seven days, so an App Store reviewer can pair with a demo agent the owner keeps online.
+- **Same ticket while connecting.** Pasting the ticket the app is already connecting with said 「没找到口令…」. It now says 「这条口令收到了，正在连接，请稍等」.
+- **Checks.** 118 app unit tests and 19 family-agent tests, 0 failures; APK `versionCode='12'`, `versionName='0.2.1'`.

@@ -41,7 +41,7 @@ Send the ordinary `whatcha.apk` and the two-line ticket message to the parent in
 
 After joining, the same record contains `label`, `address`, and `used_at`: this is where the child can see which family member joined; the host output also shows `✓ 妈妈 joined` with the address prefix. Keep this file private. Do not send its contents or paste tickets into logs.
 
-The last build command checks the APK's version. It must print `versionName='0.2.0'` and `versionCode='11'`; `0.1.0` means an old checkout.
+The last build command checks the APK's version. It must print `versionName='0.2.1'` and `versionCode='12'`; `0.1.0` means an old checkout.
 
 ### Legacy path: packed pairing for older APKs
 

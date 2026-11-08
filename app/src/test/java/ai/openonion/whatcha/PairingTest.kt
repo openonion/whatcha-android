@@ -118,10 +118,10 @@ class PairingTest {
         )
     }
 
-    @Test fun theSameUnansweredTicketStillExplainsHowToCopyANewOne() {
+    @Test fun theSameUnansweredTicketSaysItIsStillConnecting() {
         listOf(Status.CONNECTING, Status.OFFLINE).forEach { status ->
             assertEquals(
-                "没找到口令。回微信长按孩子发的那条，点「复制」，再回来",
+                "这条口令收到了，正在连接，请稍等",
                 pairingPasteHint(expected, status, "#WC1.$payload#", fromButton = true),
             )
         }

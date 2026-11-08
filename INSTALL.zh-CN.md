@@ -1,6 +1,6 @@
 # 在爸妈的华为手机上装「在干嘛」
 
-这份说明对应 v0.2.0，这是第一个支持口令配对的版本。v0.1.9 及更早的版本仍用旧的安装包配对方式：[wechat-look 分支上的这一页](https://github.com/openonion/whatcha-android/blob/wechat-look/INSTALL.zh-CN.md)。
+这份说明对应 v0.2.1（口令一周内有效）。v0.2.0 是第一个支持口令配对的版本。v0.1.9 及更早的版本仍用旧的安装包配对方式：[wechat-look 分支上的这一页](https://github.com/openonion/whatcha-android/blob/wechat-look/INSTALL.zh-CN.md)。
 
 给子女看的一页。安装包 `whatcha.apk` 由 [RUNBOOK.md](RUNBOOK.md) 打出来，安装包不带家里的口令。孩子另外发一条家人口令，爸妈长按复制，再打开应用，不用手打。下面带「手机上的原话待核对」的引号里的文字是凭记忆写的，手边没有华为手机，装的时候以手机上的字为准。
 
