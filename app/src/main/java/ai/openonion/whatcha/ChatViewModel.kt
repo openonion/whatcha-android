@@ -30,7 +30,9 @@ internal fun nextDelay(previous: Long): Long = minOf(previous * 2, 60_000L)
 
 // Coming back to the screen skips the rest of a wait: the parent is looking now, and the wait may be a whole minute.
 // Only while a retry is waiting; a try already under way is left to finish, so there is never a second socket.
-internal fun retryNow(status: Status, waiting: Boolean): Boolean = waiting && status != Status.ONLINE
+// Refused tickets and legacy packed codes wait for a fresh paste, unless this phone was already accepted.
+internal fun retryNow(status: Status, waiting: Boolean, accepted: Boolean = false): Boolean =
+    waiting && status != Status.ONLINE && (status != Status.REFUSED || accepted)
 
 // The parent who comes back while it waits sees what a cold open shows: 连接中 in the title, nothing red.
 // REFUSED keeps its strip, because the child must check the ticket. A failed try puts the strip back (onDisconnected).
@@ -209,7 +211,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         save(_lines.value.requeueSent())
     }
 
-    // Still retried by onDisconnected, slower and slower: a host whose code is corrected picks the phone up untouched.
+    // Pending tickets and legacy packed codes stop here until a fresh paste; accepted parents keep retrying.
     override fun onRefused() {
         Log.w(TAG, "host refused this phone's invite code")
         _status.value = Status.REFUSED
@@ -234,12 +236,13 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         sendQueued()
     }
 
-    // Stays OFFLINE (or REFUSED) while retrying: the strip must not change on every scheduled try. onConnected sets ONLINE
+    // Stays OFFLINE (or REFUSED for an accepted pairing) while retrying: the strip must not change on every try. onConnected sets ONLINE
     // and puts the wait back to 5 s; 5, 10, 20, 40, 60, 60… s until then.
     override fun onDisconnected(reason: String) {
         Log.w(TAG, "disconnected: $reason")
         deadline?.cancel()
         if (_status.value != Status.REFUSED) _status.value = Status.OFFLINE
+        if (!retryNow(_status.value, waiting = true, accepted = _pairing.value?.accepted == true)) return
         retry = viewModelScope.launch {
             delay(reconnectDelay)
             reconnectDelay = nextDelay(reconnectDelay)
@@ -250,7 +253,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
     /** The app is on the screen again: 连接中 while this try runs. The wait is not reset: if the try fails, the strip
      *  and the slow schedule carry on. */
     fun cameBack() {
-        if (!retryNow(_status.value, retry?.isActive == true)) return
+        if (!retryNow(_status.value, retry?.isActive == true, accepted = _pairing.value?.accepted == true)) return
         Log.i(TAG, "back on screen; retrying now")
         retry?.cancel()
         _status.value = shownOnReturn(_status.value)

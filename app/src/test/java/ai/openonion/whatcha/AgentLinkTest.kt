@@ -92,7 +92,7 @@ class AgentLinkTest {
 
     // The host's exact text: connectonion 1.9.3rc41 network/trust/ws_admin.py:101 sends
     // {"type": "ERROR", "message": "Invalid invite code"} and prints "✗ Invalid invite code from 0x…" (:98).
-    // The relay keeps the refused socket open (seen 80 s+), so the link drops it itself and the 5 s retry can run.
+    // The relay keeps the refused socket open (seen 80 s+), so the link drops it and lets the caller decide whether to retry.
     @Test
     fun aRefusedInviteCodeIsReportedAsRefusedAndTheSocketDropped() {
         val socket = Sent()

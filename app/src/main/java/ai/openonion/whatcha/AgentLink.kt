@@ -88,7 +88,7 @@ class AgentLink(
         webSocket.send(wire.onboard(invite))
     }
 
-    // The relay keeps a refused socket open, so drop it here: onFailure then schedules the retry that picks up a corrected host.
+    // The relay keeps a refused socket open, so drop it here; the caller decides whether to retry after onFailure.
     private fun refused(webSocket: WebSocket) {
         report { onRefused() }
         webSocket.cancel()

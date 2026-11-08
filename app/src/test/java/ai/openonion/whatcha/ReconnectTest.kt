@@ -7,6 +7,17 @@ import org.junit.Test
 
 class ReconnectTest {
     @Test
+    fun aRefusedUnacceptedPairingSchedulesNoRetry() {
+        assertFalse(retryNow(Status.REFUSED, waiting = true))
+    }
+
+    @Test
+    fun aRefusedAcceptedPairingKeepsRetrying() {
+        assertTrue(retryNow(Status.REFUSED, waiting = true, accepted = true))
+        assertFalse(retryNow(Status.REFUSED, waiting = false, accepted = true))
+    }
+
+    @Test
     fun theWaitDoublesAfterEachFailedTry() {
         assertEquals(10_000L, nextDelay(5_000L))
         assertEquals(20_000L, nextDelay(10_000L))
