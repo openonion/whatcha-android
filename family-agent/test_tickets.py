@@ -130,12 +130,22 @@ def test_onboard_submit_reports_the_existing_refusal(family):
 @pytest.mark.parametrize("options, port", [([], 8000), (["--port", "8123"], 8123)])
 def test_command_prints_only_the_wechat_message(family, monkeypatch, capsys, options, port):
     import io
+    from nacl.signing import SigningKey
 
     co_dir, _, ticket = family
+    key = SigningKey(bytes(range(32)))
+    (co_dir / "keys").mkdir()
+    (co_dir / "keys" / "agent.key").write_bytes(bytes(key))
+    home = co_dir.parent / "home"
+    monkeypatch.setattr(ticket.Path, "home", classmethod(lambda cls: home))
+    home_key = home / ".co" / "keys" / "agent.key"
+    home_key.parent.mkdir(parents=True)
+    home_key.write_bytes(bytes(SigningKey(bytes(reversed(range(32))))))
+    address = "0x" + bytes(key.verify_key).hex()
     monkeypatch.setattr(ticket, "__file__", str(co_dir.parent / "ticket.py"))
     def info(url):
         assert url == f"http://localhost:{port}/info"
-        return io.StringIO(json.dumps({"address": ADDRESS}))
+        return io.StringIO(json.dumps({"address": address}))
 
     monkeypatch.setattr(ticket, "urlopen", info)
     monkeypatch.setattr("sys.argv", ["ticket.py", "妈妈", *options])
@@ -146,8 +156,27 @@ def test_command_prints_only_the_wechat_message(family, monkeypatch, capsys, opt
     assert len(lines) == 2
     assert lines[0].startswith("「在干嘛」家人口令 #WC1.")
     assert lines[0].endswith("#")
+    payload = lines[0].split("#WC1.")[1].split("#")[0]
+    assert base64.urlsafe_b64decode(payload + "=")[:32].hex() == address[2:]
     assert lines[1] == "长按这条消息，点「复制」，再打开「在干嘛」"
     assert len(json.loads((co_dir / "tickets.json").read_text())) == 1
+
+
+def test_command_refuses_another_projects_host(family, monkeypatch, capsys):
+    import io
+    from nacl.signing import SigningKey
+
+    co_dir, _, ticket = family
+    (co_dir / "keys").mkdir()
+    (co_dir / "keys" / "agent.key").write_bytes(bytes(SigningKey(bytes(range(32)))))
+    monkeypatch.setattr(ticket, "__file__", str(co_dir.parent / "ticket.py"))
+    monkeypatch.setattr(ticket, "urlopen", lambda _: io.StringIO(json.dumps({"address": OTHER})))
+    monkeypatch.setattr("sys.argv", ["ticket.py", "妈妈"])
+
+    with pytest.raises(SystemExit):
+        ticket.main()
+    assert "This port serves a different agent" in capsys.readouterr().err
+    assert not (co_dir / "tickets.json").exists()
 
 
 @pytest.mark.parametrize("state", ["used", "expired", "unknown"])
@@ -183,3 +212,47 @@ def test_connect_offers_door_then_submit_refuses(family, state):
     asyncio.run(handle_onboard_submit({"payload": {"invite_code": token}}, send, routes))
     assert replies[-1] == {"type": "ERROR", "message": "Invalid invite code"}
     assert trust.get_level(OTHER) == "stranger"
+
+
+def test_command_uses_home_key_without_a_project_key(family, tmp_path, monkeypatch, capsys):
+    import io
+    from pathlib import Path
+    from nacl.signing import SigningKey
+
+    co_dir, _, ticket = family
+    home = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    key = SigningKey(bytes(range(32)))
+    key_path = home / ".co" / "keys" / "agent.key"
+    key_path.parent.mkdir(parents=True)
+    key_path.write_bytes(bytes(key))
+    address = "0x" + bytes(key.verify_key).hex()
+    monkeypatch.setattr(ticket, "__file__", str(co_dir.parent / "ticket.py"))
+    monkeypatch.setattr(ticket, "urlopen", lambda _: io.StringIO(json.dumps({"address": address})))
+    monkeypatch.setattr("sys.argv", ["ticket.py", "妈妈"])
+
+    ticket.main()
+
+    assert capsys.readouterr().out.startswith("「在干嘛」家人口令 #WC1.")
+    assert (co_dir / "tickets.json").exists()
+    assert not (co_dir / "keys").exists()
+
+
+def test_command_refuses_without_any_key(family, tmp_path, monkeypatch, capsys):
+    import io
+    from pathlib import Path
+
+    co_dir, _, ticket = family
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "empty-home"))
+    monkeypatch.setattr(ticket, "__file__", str(co_dir.parent / "ticket.py"))
+    monkeypatch.setattr(ticket, "urlopen", lambda _: io.StringIO(json.dumps({"address": OTHER})))
+    monkeypatch.setattr("sys.argv", ["ticket.py", "妈妈"])
+
+    with pytest.raises(SystemExit) as error:
+        ticket.main()
+
+    assert error.value.code == 2
+    output = capsys.readouterr()
+    assert "No agent key found" in output.err
+    assert output.out == ""
+    assert not (co_dir / "tickets.json").exists()

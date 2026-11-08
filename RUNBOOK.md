@@ -1,6 +1,6 @@
 # Runbook: run 小乐 for one family
 
-The ticket commands below need the Sprint 2 code on [wechat-look](https://github.com/openonion/whatcha-android/blob/wechat-look/RUNBOOK.md). The newest tag, [v0.1.9](https://github.com/openonion/whatcha-android/blob/v0.1.9/RUNBOOK.md), still uses the legacy packed pairing below; `main` is older and builds v0.1.0.
+v0.2.0 (versionCode 11) is the first tag with ticket pairing; v0.1.9 and older use packed pairing.
 
 Everything here runs on the child's Mac, from a checkout of this repo. The agent is the `~/.co` identity of that Mac.
 
@@ -20,6 +20,8 @@ cat ~/.co/served_by.json                                   # if it exists, "proj
 
 Another `co host` project on the same Mac without its own `.co/keys/` shares your address; two agents on one address answer each other's calls. Stop the other one (`co host --uninstall` in its directory) first.
 
+If port 8000 is already served by another project's agent, first resolve any shared-address conflict above, then choose a free port (`lsof -nP -iTCP:8123 -sTCP:LISTEN` must show nothing). From `family-agent/`, start this host with `co host --background --port 8123`, check `curl -s localhost:8123/info`, and issue the ticket with `"$(dirname "$(readlink -f "$(which co)")")/python" ticket.py 妈妈 --port 8123`; use the same port for later `/info` checks. Keep the existing identity; do not create or replace keys.
+
 ## The commands
 
 If you are a daughter, first change 你儿子 to 你女儿 in `skills/xiaole/SKILL.md` (three places: the opening line, the no-repeat example and the good-news example); the agent reads the skill once at start, so do it before `co host`.
@@ -28,18 +30,18 @@ If you are a daughter, first change 你儿子 to 你女儿 in `skills/xiaole/SKI
 cd family-agent
 co host --background
 curl -s localhost:8000/info                                # check "address" and "name": 小乐
-python ticket.py 妈妈                                      # use the Python from `co doctor`
+"$(dirname "$(readlink -f "$(which co)")")/python" ticket.py 妈妈    # co's own Python; macOS has no `python`
 cd ..
 ./gradlew :app:assembleDebug
 cp app/build/outputs/apk/debug/app-debug.apk whatcha.apk
 "$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)"/aapt2 dump badging whatcha.apk | grep -o "version[CN][a-z]*='[^']*'"
 ```
 
-Send the ordinary `whatcha.apk` and the two-line ticket message to the parent in WeChat. Run the ticket command once per family member, using their family label. It prints only the message to copy. It reads the running host's address from `http://localhost:8000/info`, so start the host first. For another host port, use `python ticket.py 妈妈 --port 8123`. Tickets live in the gitignored `family-agent/.co/tickets.json`; each is valid for 24 hours and one phone. Create another ticket for a new phone or an app reinstall that lost its identity (an Android reinstall does; an iPhone keeps its identity in the Keychain and reconnects without one). No host restart is needed after creating a ticket.
+Send the ordinary `whatcha.apk` and the two-line ticket message to the parent in WeChat. Run the ticket command once per family member, using their family label. It prints only the message to copy. It reads the running host's address from `http://localhost:8000/info`, so start the host first. For another host port, use `"$(dirname "$(readlink -f "$(which co)")")/python" ticket.py 妈妈 --port 8123`. Tickets live in the gitignored `family-agent/.co/tickets.json`; each is valid for 24 hours and one phone. Create another ticket for a new phone or an app reinstall that lost its identity (an Android reinstall does; an iPhone keeps its identity in the Keychain and reconnects without one). No host restart is needed after creating a ticket.
 
 After joining, the same record contains `label`, `address`, and `used_at`: this is where the child can see which family member joined; the host output also shows `✓ 妈妈 joined` with the address prefix. Keep this file private. Do not send its contents or paste tickets into logs.
 
-The last build command checks the APK's version. It must print `versionName='0.1.9'` and `versionCode='10'`; `0.1.0` means an old checkout.
+The last build command checks the APK's version. It must print `versionName='0.2.0'` and `versionCode='11'`; `0.1.0` means an old checkout.
 
 ### Legacy path: packed pairing for older APKs
 
@@ -61,8 +63,10 @@ Parents far away: send `whatcha.apk` and the ticket message into your WeChat cha
 ## Smoke test
 
 1. `curl -s localhost:8000/info` answers with your address and `"name": "小乐"`.
-2. On an unpaired phone, long-press the ticket message in WeChat → Copy → open 在干嘛. It should connect without a tap; if automatic clipboard access is blocked, tap 粘贴口令. Then type 「在干嘛」, and the reply comes from 小乐, opening 「叔叔阿姨好，我是小乐，你儿子请的 AI。」 once and then something from the notebook; a reply that introduces 小乐 again on the next message is the bug to report. The host log shows one `INPUT` line per message.
-3. The title drops 「(连接中…)」 within seconds. Check `.co/tickets.json` for the family label, joined address and `used_at`. If the strip says 「口令过期或用过了，\n请孩子重新发一条」, issue a fresh ticket and send it in WeChat. Before the first accepted connection, the parent can copy it and return, or tap 粘贴口令 under the strip, to replace the refused pairing immediately. This also works for a refused legacy packed pairing. The first `CONNECTED` makes pairing permanent; later clipboard text cannot replace it. Existing saved pairings without an acceptance flag are kept and gain the flag on their next connection. For a legacy packed APK, also check that its invite matches `CO_INVITE_CODE`.
+2. On an unpaired phone, long-press the ticket message in WeChat → Copy → open 在干嘛. It should connect without a tap; if automatic clipboard access is blocked, tap 我复制好了. Then type 「在干嘛」, and the reply comes from 小乐, opening 「叔叔阿姨好，我是小乐，你儿子请的 AI。」 once and then something from the notebook; a reply that introduces 小乐 again on the next message is the bug to report. The host log shows one `INPUT` line per message.
+3. The title drops 「(连接中…)」 within seconds. Check `.co/tickets.json` for the family label, joined address and `used_at`. If the strip says 「口令过期或用过了，\n请孩子重新发一条」, issue a fresh ticket and send it in WeChat. Before the first accepted connection, the parent can copy it and return, or tap 我复制好了 under the strip, to replace the refused pairing immediately. This also works for a refused legacy packed pairing. The first `CONNECTED` makes pairing permanent; later clipboard text cannot replace it. Existing saved pairings without an acceptance flag are kept and gain the flag on their next connection. For a legacy packed APK, also check that its invite matches `CO_INVITE_CODE`.
+
+A long 「暂时联系不上」 right after setup means the child should check the host and port and issue a fresh ticket; the pending pairing takes it without reinstalling.
 
 ## A new version, and the first week
 

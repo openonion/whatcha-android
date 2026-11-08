@@ -22,6 +22,20 @@ class PairingTest {
         invite = Base64.getUrlEncoder().withoutPadding().encodeToString(token),
     )
 
+    @Test fun legacyChatIsAcceptedOnlyWhenHistoryExists() {
+        val history = """[{"fromParent":true,"text":"在干嘛","at":1}]"""
+        listOf(
+            """{"agent":"old-agent","invite":"old-code"}""" to listOf(true, false, false),
+            """{"agent":"old-agent","invite":"old-code","accepted":false}""" to listOf(false, false, false),
+            """{"agent":"old-agent","invite":"old-code","accepted":true}""" to listOf(true, true, true),
+        ).forEach { (saved, acceptedResults) ->
+            val decoded = Json.decodeFromString<Pairing>(saved)
+            listOf(history, "[]", null).zip(acceptedResults).forEach { (lines, accepted) ->
+                assertEquals(decoded.copy(accepted = accepted), migratedPairing(saved, lines))
+            }
+        }
+    }
+
     @Test fun aRefusedTicketCanBeReplacedImmediately() {
         val refused = expected.copy(invite = "expired")
         assertTrue(canPastePairing(refused, Status.REFUSED))
@@ -43,10 +57,10 @@ class PairingTest {
         }
     }
 
-    @Test fun aLegacySavedPairingIsKeptAndAcceptedOnItsNextConnection() {
+    @Test fun aLegacyPendingPairingCanBeReplacedUntilItsNextConnection() {
         val saved = Json.decodeFromString<Pairing>("""{"agent":"old-agent","relay":"wss://relay.example","invite":"old-code"}""")
         listOf(Status.CONNECTING, Status.OFFLINE, Status.ONLINE).forEach { status ->
-            assertEquals(saved, pairingAfterPaste(saved, status, "#WC1.$payload#"))
+            assertEquals(expected, pairingAfterPaste(saved, status, "#WC1.$payload#"))
         }
         assertEquals(saved, pairingAfterPaste(saved, Status.REFUSED, "ordinary clipboard text"))
         val accepted = saved.afterConnected()
@@ -65,6 +79,73 @@ class PairingTest {
     @Test fun anUnpairedPhoneCanPasteWithoutWaitingForRefusal() {
         assertEquals(expected, pairingAfterPaste(null, Status.UNPAIRED, "#WC1.$payload#"))
         assertNull(pairingAfterPaste(null, Status.UNPAIRED, "invalid"))
+    }
+
+    @Test fun everyPendingStatusCanTakeADifferentTicket() {
+        val pending = expected.copy(invite = "unanswered")
+        Status.entries.forEach { status ->
+            assertTrue(canPastePairing(pending, status))
+            assertEquals(expected, pairingAfterPaste(pending, status, "#WC1.$payload#"))
+            assertEquals(pending, pairingAfterPaste(pending, status, "ordinary text"))
+        }
+    }
+
+    @Test fun theSamePendingTicketDoesNotRestartPairing() {
+        Status.entries.forEach { status ->
+            assertEquals(expected, pairingAfterPaste(expected, status, "#WC1.$payload#"))
+        }
+    }
+
+    @Test fun aButtonExplainsMissingOrdinaryAndPartialClipboardText() {
+        listOf("", "ordinary WeChat message", "#WC1.${payload.dropLast(1)}#").forEach { text ->
+            Status.entries.forEach { status ->
+                assertEquals(
+                    "没找到口令。回微信长按孩子发的那条，点「复制」，再回来",
+                    pairingPasteHint(null, status, text, fromButton = true),
+                )
+                assertEquals(
+                    "没找到口令。回微信长按孩子发的那条，点「复制」，再回来",
+                    pairingPasteHint(expected, status, text, fromButton = true),
+                )
+            }
+        }
+    }
+
+    @Test fun aButtonExplainsTheSameUsedTicket() {
+        assertEquals(
+            "这条口令用过了，请孩子重新发一条",
+            pairingPasteHint(expected, Status.REFUSED, "#WC1.$payload#", fromButton = true),
+        )
+    }
+
+    @Test fun theSameUnansweredTicketStillExplainsHowToCopyANewOne() {
+        listOf(Status.CONNECTING, Status.OFFLINE).forEach { status ->
+            assertEquals(
+                "没找到口令。回微信长按孩子发的那条，点「复制」，再回来",
+                pairingPasteHint(expected, status, "#WC1.$payload#", fromButton = true),
+            )
+        }
+    }
+
+    @Test fun aFreshTicketClearsThePasteHintInEveryPendingStatus() {
+        val pending = expected.copy(invite = "unanswered")
+        Status.entries.forEach { status ->
+            assertNull(pairingPasteHint(pending, status, "#WC1.$payload#", fromButton = true))
+        }
+        assertNull(pairingPasteHint(null, Status.UNPAIRED, "#WC1.$payload#", fromButton = true))
+    }
+
+    @Test fun automaticFocusReadsNeverExplainClipboardFailures() {
+        listOf("", "ordinary text", "#WC1.${payload.dropLast(1)}#", "#WC1.$payload#").forEach { text ->
+            assertNull(pairingPasteHint(null, Status.UNPAIRED, text, fromButton = false))
+            assertNull(pairingPasteHint(expected, Status.REFUSED, text, fromButton = false))
+        }
+    }
+
+    @Test fun acceptedPairingsNeverShowAPasteHint() {
+        Status.entries.forEach { status ->
+            assertNull(pairingPasteHint(expected.afterConnected(), status, "", fromButton = true))
+        }
     }
 
     @Test fun parsesTicket() = assertEquals(expected, parsePairing("#WC1.$payload#"))

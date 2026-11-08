@@ -88,14 +88,20 @@ class ChatViewModel(app: Application) : AndroidViewModel(app), AgentLink.Listene
         dispatch = ::onMain,
     )
 
-    /** A refused pending pairing can take a fresh ticket; an accepted pairing stays for good. */
-    fun pastePairing() {
+    private val _pairingHint = MutableStateFlow<String?>(null)
+    val pairingHint: StateFlow<String?> = _pairingHint
+
+    /** Any pending pairing can take a fresh ticket; only a button tap explains a failed paste. */
+    fun pastePairing(fromButton: Boolean = false) {
         val current = _pairing.value
         if (!canPastePairing(current, _status.value)) return
         val clipboard = getApplication<Application>().getSystemService(ClipboardManager::class.java)
-        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: return
-        val found = pairingAfterPaste(current, _status.value, text) ?: return
-        if (found == current) return
+        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
+        val found = pairingAfterPaste(current, _status.value, text)
+        if (fromButton || found != current) {
+            _pairingHint.value = pairingPasteHint(current, _status.value, text, fromButton)
+        }
+        if (found == null || found == current) return
         retry?.cancel()
         deadline?.cancel()
         link?.close()

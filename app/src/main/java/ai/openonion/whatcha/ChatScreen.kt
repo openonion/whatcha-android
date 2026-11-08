@@ -103,6 +103,7 @@ fun ChatScreen(vm: ChatViewModel) {
     val title by vm.title.collectAsState()
     val status by vm.status.collectAsState()
     val pairing by vm.pairing.collectAsState()
+    val pairingHint by vm.pairingHint.collectAsState()
     val voiceMode by vm.voiceMode.collectAsState()
     val recording by vm.recording.collectAsState()
     var viewing by remember { mutableStateOf<String?>(null) }
@@ -112,10 +113,9 @@ fun ChatScreen(vm: ChatViewModel) {
             Column(Modifier.fillMaxSize()) {
                 Header(headerTitle(title, lines, status))
                 statusText(status)?.let { StatusStrip(it) }
-                if (status == Status.REFUSED && canPastePairing(pairing, status)) {
-                    PastePairing(vm::pastePairing, Modifier.padding(horizontal = 32.dp, vertical = 16.dp))
+                if (canPastePairing(pairing, status)) {
+                    PairingPrompt({ vm.pastePairing(fromButton = true) }, pairingHint, Modifier.weight(1f))
                 }
-                if (status == Status.UNPAIRED) PairingPrompt(vm::pastePairing, Modifier.weight(1f))
                 else {
                     val hint = emptyHint(title, lines, status)
                     if (hint != null) EmptyHint(hint, Modifier.weight(1f))
@@ -131,15 +131,19 @@ fun ChatScreen(vm: ChatViewModel) {
 }
 
 @Composable
-private fun PairingPrompt(onPaste: () -> Unit, modifier: Modifier) {
+private fun PairingPrompt(onPaste: () -> Unit, hint: String?, modifier: Modifier) {
     Box(modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("请孩子在微信里发来口令，长按复制，再回到这里", style = Body, textAlign = TextAlign.Center)
+            Text(PAIRING_PROMPT, style = Body, textAlign = TextAlign.Center)
             Spacer(Modifier.height(32.dp))
             PastePairing(onPaste)
+            hint?.let {
+                Spacer(Modifier.height(12.dp))
+                Text(it, style = Small, textAlign = TextAlign.Center)
+            }
         }
     }
 }
@@ -151,7 +155,7 @@ private fun PastePairing(onPaste: () -> Unit, modifier: Modifier = Modifier) {
             .clickable(role = Role.Button) { onPaste() },
         contentAlignment = Alignment.Center,
     ) {
-        Text("粘贴口令", style = Body.copy(color = Color.White), modifier = Modifier.padding(vertical = 12.dp))
+        Text("我复制好了", style = Body.copy(color = Color.White), modifier = Modifier.padding(vertical = 12.dp))
     }
 }
 
@@ -202,12 +206,14 @@ private fun StatusStrip(text: String) {
 }
 
 // A blank grey page gives a parent no reason to type; say what this is for until the first message.
-// With no line yet the grey middle says what the parent does next: ask, or, while the Mac has not accepted
-// this phone's ticket, call the child. With history the history is the page (11d).
+// With no line yet the grey middle says what the parent does next. Pending pairings show the paste prompt.
+// With history the history is the page (11d).
+internal const val PAIRING_PROMPT = "请孩子在微信里发来口令，\n长按复制，再回到这里"
+
 internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? = when {
     lines.isNotEmpty() -> null
-    status == Status.UNPAIRED -> "请孩子在微信里发来口令，长按复制，再回到这里"
-    status == Status.REFUSED -> "给孩子打个电话"
+    status == Status.UNPAIRED -> PAIRING_PROMPT
+    status == Status.REFUSED -> PAIRING_PROMPT
     else -> "想知道孩子在干嘛，\n就在下面问$name，\n打字说话都行"
 }
 

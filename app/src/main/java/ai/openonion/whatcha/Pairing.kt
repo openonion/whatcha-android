@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -19,10 +20,17 @@ data class Pairing(
 )
 
 internal fun canPastePairing(current: Pairing?, status: Status): Boolean =
-    current == null || (!current.accepted && status == Status.REFUSED)
+    current?.accepted != true
 
 internal fun pairingAfterPaste(current: Pairing?, status: Status, text: String): Pairing? =
     if (canPastePairing(current, status)) parsePairing(text) ?: current else current
+
+internal fun pairingPasteHint(current: Pairing?, status: Status, text: String, fromButton: Boolean): String? = when {
+    !fromButton || !canPastePairing(current, status) -> null
+    pairingAfterPaste(current, status, text) != current -> null
+    current != null && status == Status.REFUSED && parsePairing(text) == current -> "这条口令用过了，请孩子重新发一条"
+    else -> "没找到口令。回微信长按孩子发的那条，点「复制」，再回来"
+}
 
 internal fun Pairing.afterConnected(): Pairing = copy(accepted = true)
 
@@ -47,10 +55,26 @@ const val PAIRING_BLOCK_ID = 0x77686174
 private const val SIGNING_BLOCK_MAGIC = "APK Sig Block 42"
 private const val EOCD_SIGNATURE = 0x06054b50
 
+internal fun migratedPairing(savedJson: String, linesJson: String?): Pairing {
+    val pairing = Json.decodeFromString<Pairing>(savedJson)
+    return if ("accepted" !in Json.parseToJsonElement(savedJson).jsonObject &&
+        Json.decodeFromString<List<Line>>(linesJson ?: "[]").isNotEmpty()
+    ) pairing.afterConnected() else pairing
+}
+
 fun loadPairing(context: Context): Pairing? {
     val prefs = context.getSharedPreferences("pairing", Context.MODE_PRIVATE)
     val saved = prefs.getString("pairing", null)
-    if (saved != null) return Json.decodeFromString<Pairing>(saved)
+    if (saved != null) {
+        val pairing = migratedPairing(
+            saved,
+            context.getSharedPreferences("chat", Context.MODE_PRIVATE).getString("lines", null),
+        )
+        if (pairing != Json.decodeFromString<Pairing>(saved)) {
+            savePairing(context, pairing)
+        }
+        return pairing
+    }
     val packed = readSigningBlockEntry(File(context.applicationInfo.sourceDir).readBytes(), PAIRING_BLOCK_ID)
         ?: return null
     val json = packed.decodeToString()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Issue one family ticket. Run beside agent.py: python ticket.py 妈妈."""
+"""Issue one family ticket. Run beside agent.py with co's own Python (see RUNBOOK)."""
 import argparse
 import base64
 from contextlib import contextmanager
@@ -9,6 +9,8 @@ from pathlib import Path
 import secrets
 import time
 from urllib.request import urlopen
+
+from nacl.signing import SigningKey
 
 TICKET_SECONDS = 24 * 60 * 60
 
@@ -53,9 +55,18 @@ def main():
     parser.add_argument("label")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
+    co_dir = Path(__file__).resolve().parent / ".co"
+    key_path = co_dir / "keys" / "agent.key"
+    if not key_path.exists():
+        key_path = Path.home() / ".co" / "keys" / "agent.key"
+    if not key_path.exists():
+        parser.error("No agent key found in this project or ~/.co. Start the host with its existing identity first.")
+    key = SigningKey(key_path.read_bytes())
     with urlopen(f"http://localhost:{args.port}/info") as response:
         address = json.load(response)["address"]
-    print(issue_ticket(Path(__file__).resolve().parent / ".co", address, args.label))
+    if address != "0x" + bytes(key.verify_key).hex():
+        parser.error("This port serves a different agent. Start this project's host on its own port and use the same --port here.")
+    print(issue_ticket(co_dir, address, args.label))
 
 
 if __name__ == "__main__":

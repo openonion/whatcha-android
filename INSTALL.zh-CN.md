@@ -1,6 +1,6 @@
 # 在爸妈的华为手机上装「在干嘛」
 
-这份口令配对说明对应 wechat-look 分支的 Sprint 2 代码；v0.1.9 及更早的 tag 仍是旧的安装包配对方式：[wechat-look 分支上的这一页](https://github.com/openonion/whatcha-android/blob/wechat-look/INSTALL.zh-CN.md)。
+这份说明对应 v0.2.0，这是第一个支持口令配对的版本。v0.1.9 及更早的版本仍用旧的安装包配对方式：[wechat-look 分支上的这一页](https://github.com/openonion/whatcha-android/blob/wechat-look/INSTALL.zh-CN.md)。
 
 给子女看的一页。安装包 `whatcha.apk` 由 [RUNBOOK.md](RUNBOOK.md) 打出来，安装包不带家里的口令。孩子另外发一条家人口令，爸妈长按复制，再打开应用，不用手打。下面带「手机上的原话待核对」的引号里的文字是凭记忆写的，手边没有华为手机，装的时候以手机上的字为准。
 
@@ -8,7 +8,7 @@
 
 爸妈在远处，你看不到他们的屏幕，所以每一步你只念「说」那一行。「他会看到」是手机上应该出来的字，「卡住了」是他停下来时你说的那一句。华为上的字没在真机上核对过，标着「待核对」，以他念给你听的为准。后面几节是同样的步骤写给你自己的版本，念的时候不用翻。
 
-**打电话之前（你自己）：** 照 [RUNBOOK.md](RUNBOOK.md) 打好 `whatcha.apk`，在 `family-agent/` 里运行 `python ticket.py 妈妈`，把安装包和打印的两行口令都发进你跟爸妈的微信聊天里（不是文件传输助手），然后再打微信电话。电话要是断了，再打过去，从断的那一步接着念。
+**打电话之前（你自己）：** 照 [RUNBOOK.md](RUNBOOK.md) 打好 `whatcha.apk`，在 `family-agent/` 里运行 `"$(dirname "$(readlink -f "$(which co)")")/python" ticket.py 妈妈`（端口要跟 RUNBOOK 里启动小乐时的一样；如需其他端口，加 `--port 8123`），把安装包和打印的两行口令都发进你跟爸妈的微信聊天里（不是文件传输助手），然后再打微信电话。电话要是断了，再打过去，从断的那一步接着念。
 
 **第 0 步：开免提，看系统版本**
 
@@ -50,9 +50,11 @@
 
 - 说：「装好以后回到微信，找到我刚发的家人口令。长按那条消息，点 复制，再回桌面打开 在干嘛。」
 - 他会看到：复制好再打开，几秒后进入小乐的聊天；不用输入口令，也不用点连接。
-- 还没复制时，屏幕会写「请孩子在微信里发来口令，长按复制，再回到这里」，下面有一个大按钮「粘贴口令」。
-- 卡住了：已经复制还没进聊天，就说「点一下 粘贴口令」。有些手机不让应用自动读剪贴板。
-- 给你自己看的：先在 Mac 上按 RUNBOOK 运行 `python ticket.py 妈妈`，把打印的两行原样发到微信。每位家人一条，24 小时内用一次。已经连过的手机不用再复制。
+- 还没复制时，屏幕会写「请孩子在微信里发来口令，长按复制，再回到这里」，下面有一个大按钮「我复制好了」。
+- 卡住了：已经复制还没进聊天，就说「点一下 我复制好了」。有些手机不让应用自动读剪贴板。
+- 卡住了：点了按钮后说「没找到口令。回微信长按孩子发的那条，点「复制」，再回来」，就照这句话做。
+- 卡住了：刚装好，一直说「暂时联系不上」，等了很久也没好，就说「让孩子重新发一条口令，长按复制，再打开 在干嘛」。孩子先按 RUNBOOK 检查自己的小乐有没有开着、端口有没有用对。
+- 给你自己看的：先在 Mac 上按 RUNBOOK 运行 `"$(dirname "$(readlink -f "$(which co)")")/python" ticket.py 妈妈`（端口要跟 RUNBOOK 里启动小乐时的一样；如需其他端口，加 `--port 8123`），把打印的两行原样发到微信。每位家人一条，24 小时内用一次。已经连过的手机不用再复制。
 
 **第 5 步：允许录音（先别录）**
 
@@ -109,9 +111,9 @@
 ## 第一次打开
 
 - 在微信里找到孩子发来的「在干嘛」家人口令，**长按 → 复制 → 打开「在干嘛」**。不用手打，也不用打开链接。
-- 没有口令时，屏幕会写「请孩子在微信里发来口令，长按复制，再回到这里」。复制后回到这里会自动连接；还停在这页就点「粘贴口令」。复制了其他文字不会改变什么。
+- 没有口令时，屏幕会写「请孩子在微信里发来口令，长按复制，再回到这里」。复制后回到这里会自动连接；还停在这页就点「我复制好了」。复制了其他文字不会改变什么。没复制到口令时，点按钮会说「没找到口令。回微信长按孩子发的那条，点「复制」，再回来」。照着做就行。
 - 连上后标题是「小乐」，中间写「想知道孩子在干嘛，就在下面问小乐，打字说话都行」。
-- If the strip says 「口令过期或用过了，请孩子重新发一条」, ask the child for a fresh ticket, copy it in WeChat, and return to the app or tap 粘贴口令. A refused pairing can be replaced until the first accepted connection. After that, the saved pairing stays permanent. Follow the recovery steps in RUNBOOK; no reinstall is needed.
+- If the strip says 「口令过期或用过了，请孩子重新发一条」, ask the child for a fresh ticket, copy it in WeChat, and return to the app or tap 我复制好了. A refused pairing can be replaced until the first accepted connection. After that, the saved pairing stays permanent. Follow the recovery steps in RUNBOOK; no reinstall is needed.
 - **录音。** 电话里怎么说，见上面第 5 步；电话没挂之前别让他试录音。
 
   给你自己看的，不用念：手机问的原话是「允许"在干嘛"录音？」「手机上的原话待核对」。不要选「本次」「仅这一次」「待核对」，那个过一阵就失效。按返回或点框外面不算拒绝，再点圆按钮手机还会问。点一次 禁止，屏幕上一行小字「要允许录音，才能按住说话」，再点圆按钮手机再问；连着两次 禁止，屏幕上出来一个大字框，写着 权限 → 麦克风 → 允许，下面是「取消」「去设置」。点「去设置」才会打开在干嘛的设置页，照着点完一直按返回，按到聊天出来（AOSP 上是三次，华为待核对），下面已经是「按住 说话」，不用再点圆按钮。点「取消」就留在聊天页，下次点圆按钮框还会出来。
