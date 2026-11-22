@@ -1,14 +1,16 @@
 import json
 import time
+from copy import deepcopy
 from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from threading import Thread
+from unittest.mock import Mock
 from uuid import uuid4
 
 from connectonion.network.host.session.storage import Session, SessionStorage
 from nacl.signing import SigningKey
 
-from family_admin import ChildMessages, handler_for
+from family_admin import ChildMessages, family_overview, handler_for
 from ticket import edit_tickets
 
 
@@ -55,10 +57,66 @@ def test_family_admin_requires_separate_token_and_only_returns_paired_sessions(t
             [conversation] = after["conversations"]
             assert conversation["id"] == "paired-parent"
             assert [message["text"] for message in conversation["messages"]] == ["你在干嘛", "在整理笔记"]
+            assert all("at" not in message for message in conversation["messages"])
         finally:
             connection.close()
             server.shutdown()
             thread.join(timeout=5)
+
+
+def test_family_overview_preserves_three_quick_turns_with_trace_timestamps(tmp_path):
+    parent = "paired-parent"
+    with edit_tickets(tmp_path) as tickets:
+        tickets["accepted"] = {"address": parent, "label": "妈妈"}
+    epoch = 1_700_000_000
+    session = {
+        "requester": {"address": parent},
+        "messages": [{"role": "system", "content": "hidden configuration"}],
+        "trace": [],
+    }
+    expected = []
+    for turn in range(1, 4):
+        prompt, reply = "Are you there?", f"Reply {turn}"
+        start_ms = (turn - 1) * 250
+        user_id = f"msg-{len(session['messages'])}"
+        reply_id = f"response-{turn}"
+        session["messages"].extend([
+            {"role": "user", "content": prompt},
+            {"role": "user", "content": "hidden reminder", "internal": True},
+            {"role": "assistant", "content": reply, "id": reply_id},
+        ])
+        session["trace"].extend([
+            {"type": "user_input", "turn": turn, "ts": epoch + start_ms / 1000, "content": prompt},
+            {"type": "turn_result", "turn": turn, "ts": epoch + (start_ms + 125) / 1000},
+        ])
+        expected.extend([
+            {"id": user_id, "sender": "user", "text": prompt, "at": epoch * 1000 + start_ms},
+            {"id": reply_id, "sender": "agent", "text": reply, "at": epoch * 1000 + start_ms + 125},
+        ])
+
+    record = Session(session_id="thread", status="complete", prompt=prompt, session=session)
+    storage = Mock(spec=SessionStorage)
+    storage.list.return_value = [record]
+    before = deepcopy(record.session)
+    [conversation] = family_overview(tmp_path, storage)["conversations"]
+    assert conversation["messages"] == expected
+
+    assert record.session == before
+
+    # A missing result must not borrow the timestamp from the following turn.
+    del record.session["trace"][3]
+    del expected[3]["at"]
+    [conversation] = family_overview(tmp_path, storage)["conversations"]
+    assert conversation["messages"] == expected
+
+    record.session["messages"][1:1] = [
+        {"role": "user", "content": "Old question"},
+        {"role": "assistant", "content": "Old answer"},
+    ]
+    [conversation] = family_overview(tmp_path, storage)["conversations"]
+    messages = conversation["messages"]
+    assert all("at" not in message for message in messages[:2])
+    assert [message.get("at") for message in messages[2:]] == [message.get("at") for message in expected]
 
 
 def test_direct_messages_are_idempotent_persistent_and_visible_only_to_recipient(tmp_path):

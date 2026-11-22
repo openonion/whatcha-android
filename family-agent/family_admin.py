@@ -63,6 +63,49 @@ def paired_addresses(directory: Path) -> set[str]:
             if record.get("address") and not record.get("reusable") and not record.get("revoked_at")}
 
 
+def _chat_timestamps(session: dict) -> dict[tuple[str, str], int]:
+    """Map chat item keys to Unix milliseconds from the corresponding host turn."""
+    messages = session.get("messages", [])
+    trace = session.get("trace", [])
+    inputs = [event for event in trace if event.get("type") == "user_input"]
+    user_indices = [index for index, msg in enumerate(messages)
+                    if msg.get("role") == "user" and not msg.get("internal")]
+    if len(inputs) == len(user_indices):
+        input_by_index = dict(zip(user_indices, inputs))
+    else:
+        # Resumed legacy histories can have an untraced prefix. Recover only
+        # the contiguous suffix whose text also agrees with the host trace.
+        input_by_index = {}
+        for index, event in zip(reversed(user_indices), reversed(inputs)):
+            prompt = event.get("content")
+            if not isinstance(prompt, str) or prompt != messages[index].get("content"):
+                break
+            input_by_index[index] = event
+    results = {event["turn"]: event for event in trace
+               if event.get("type") == "turn_result" and type(event.get("turn")) is int}
+
+    timestamps = {}
+    result = {}
+    for index, msg in enumerate(messages):
+        item_id = f"msg-{index}"
+        if msg.get("role") == "user" and not msg.get("internal"):
+            event = input_by_index.get(index, {})
+            turn = event.get("turn")
+            result = results.get(turn, {}) if type(turn) is int else {}
+            sender = "user"
+        elif msg.get("role") == "assistant" and msg.get("content"):
+            event = result
+            sender = "agent"
+            if isinstance(msg.get("id"), str) and msg["id"]:
+                item_id = msg["id"]
+        else:
+            continue
+        ts = event.get("ts")
+        if type(ts) in (int, float) and 0 <= ts * 1000 < 2**63:
+            timestamps[sender, item_id] = int(ts * 1000)
+    return timestamps
+
+
 def family_overview(directory: Path, storage: SessionStorage) -> dict:
     now = time.time()
     members = []
@@ -84,11 +127,16 @@ def family_overview(directory: Path, storage: SessionStorage) -> dict:
         label = labels.get(owner)
         if label is None:
             continue
-        messages = [
-            {"id": item["id"], "sender": item["type"], "text": item["content"]}
-            for item in session_to_chat_items(session.session or {})
-            if item["type"] in ("user", "agent") and isinstance(item.get("content"), str)
-        ]
+        payload = session.session or {}
+        timestamps = _chat_timestamps(payload)
+        messages = []
+        for item in session_to_chat_items(payload):
+            if item["type"] in ("user", "agent") and isinstance(item.get("content"), str):
+                message = {"id": item["id"], "sender": item["type"], "text": item["content"]}
+                at = timestamps.get((item["type"], item["id"]))
+                if at is not None:
+                    message["at"] = at
+                messages.append(message)
         if messages:
             conversations.append({"id": session.session_id, "parent": owner, "label": label, "messages": messages})
     return {"members": members, "conversations": conversations}
