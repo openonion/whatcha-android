@@ -1,6 +1,7 @@
 package ai.openonion.whatcha
 
 import android.content.Context
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
@@ -18,18 +19,27 @@ internal fun worthSending(millis: Long): Boolean = millis >= 1_000
 
 enum class MicStep { TALK, ASK_AGAIN, OPEN_SETTINGS }
 
-const val MIC_ASK_AGAIN = "要允许用麦克风，才能按住说话"
-const val MIC_OPEN_SETTINGS = "点「权限」，把「麦克风」打开，再回来"
+const val MIC_ASK_AGAIN = "要允许录音，才能按住说话"
+const val MIC_SETTINGS_STEPS = "要允许录音，\n才能按住说话。\n点「去设置」，\n再点 权限 →\n麦克风 → 允许\n然后按返回，\n按到聊天出来。"
 
 /**
- * What happens after the system's microphone question. [canAskAgain] is shouldShowRequestPermissionRationale,
- * read in the answer: once it is false after a no, Android will not ask again and only the settings page helps.
+ * After the system's microphone question. [rationale] is shouldShowRequestPermissionRationale read in the answer;
+ * [saidNoBefore] is whether this parent has ever said No (rationale was true once). Rationale is false both before
+ * any No (Back on the first question; the system will ask again) and once Android has stopped asking; only the
+ * memory of an earlier No tells them apart.
  */
-internal fun afterMicAnswer(granted: Boolean, canAskAgain: Boolean): MicStep = when {
+internal fun afterMicAnswer(granted: Boolean, rationale: Boolean, saidNoBefore: Boolean): MicStep = when {
     granted -> MicStep.TALK
-    canAskAgain -> MicStep.ASK_AGAIN
+    rationale || !saidNoBefore -> MicStep.ASK_AGAIN
     else -> MicStep.OPEN_SETTINGS
 }
+
+/** A call has the microphone: Android hands the call all the sound and gives a second recorder silence. */
+internal fun callHasMic(mode: Int, recordingSources: List<Int>): Boolean =
+    mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION ||
+        MediaRecorder.AudioSource.VOICE_COMMUNICATION in recordingSources
+
+const val MIC_IN_CALL = "正在打电话，\n不能录音。\n挂了电话\n再按住说话。"
 
 internal fun voiceLabel(seconds: Int): String = "$seconds″"
 

@@ -74,7 +74,24 @@ fun List<Line>.retry(line: Line): List<Line> =
     map { if (it === line && it.delivery == Delivery.FAILED) it.copy(delivery = Delivery.QUEUED) else it }
 
 /**
- * After a reconnect the host only streams a reply for a run still in progress. If the agent is idle, a
- * message still waiting lost its reply (the app was killed, or the link dropped as the run ended), so ask again.
+ * After a reconnect the host only streams a reply for a run still in progress. When the run has ended, a message
+ * still waiting lost its reply (the app was killed, or the link dropped as the run ended). connectonion's
+ * establish_connection (network/host/ws_router/connect.py) sends the stored conversation as `chat_items` when it
+ * is newer than ours, which [history] holds as (fromParent, text): if its last question is this message and an
+ * answer follows that is not already the newest reply here, that answer is shown. Otherwise the message is asked
+ * again: the question never arrived, the session is new, the run failed, or that answer was to an earlier,
+ * identical question.
  */
-fun List<Line>.afterReconnect(agentRunning: Boolean): List<Line> = if (agentRunning) this else requeueSent()
+fun List<Line>.afterReconnect(agentRunning: Boolean, history: List<Pair<Boolean, String>>, now: Long): List<Line> {
+    if (agentRunning) return this
+    val answer = answerIn(history) ?: return requeueSent()
+    return answerOldest() + Line(fromParent = false, text = answer, at = now)
+}
+
+private fun List<Line>.answerIn(history: List<Pair<Boolean, String>>): String? {
+    val waiting = firstOrNull { it.delivery == Delivery.SENT } ?: return null
+    val asked = history.indexOfLast { it.first }
+    if (asked < 0 || history[asked].second != waiting.text) return null
+    val answer = history.drop(asked + 1).lastOrNull()?.second ?: return null
+    return answer.takeIf { it != lastOrNull { !it.fromParent }?.text }
+}

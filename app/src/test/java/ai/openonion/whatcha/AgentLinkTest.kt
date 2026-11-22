@@ -25,18 +25,47 @@ class AgentLinkTest {
 
     private class Heard : AgentLink.Listener {
         val events = mutableListOf<String>()
-        override fun onConnected(sessionId: String, running: Boolean) { events += "connected $sessionId running=$running" }
+        var history: List<Pair<Boolean, String>>? = null
+        override fun onConnected(sessionId: String, running: Boolean, history: List<Pair<Boolean, String>>) {
+            events += "connected $sessionId running=$running"
+            this.history = history
+        }
         override fun onProfile(name: String) {}
         override fun onReply(text: String) {}
         override fun onError(message: String) { events += "error" }
         override fun onRejected() { events += "rejected" }
         override fun onRefused() { events += "refused" }
-        override fun onDisconnected(reason: String) {}
+        override fun onDisconnected(reason: String) { events += "disconnected" }
     }
 
     private val me = Identity(Ed25519PrivateKeyParameters(ByteArray(32) { it.toByte() }, 0))
     private val heard = Heard()
     private val link = AgentLink(Pairing(agent = "0xagent"), Wire(me, "0xagent", now = { 1L }), heard, sessionId = "saved")
+
+    @Test
+    fun aReplacedLinkCannotChangeTheNewPairingsState() {
+        link.close()
+        val socket = Sent()
+        link.onMessage(socket, """{"type":"CONNECTED","session_id":"old"}""")
+        link.onMessage(socket, """{"type":"ERROR","message":"Invalid invite code"}""")
+        link.onFailure(socket, IllegalStateException("old socket"), null)
+        link.onClosed(socket, 1000, "old socket")
+        assertEquals(emptyList<String>(), heard.events)
+    }
+
+    @Test
+    fun replacingALinkDiscardsEventsAlreadyWaitingForTheMainThread() {
+        val pending = mutableListOf<() -> Unit>()
+        val old = AgentLink(Pairing(agent = "old"), Wire(me, "old"), heard, dispatch = { pending.add(it) })
+        val socket = Sent()
+        old.onMessage(socket, """{"type":"CONNECTED","session_id":"old"}""")
+        old.onMessage(socket, """{"type":"ERROR","message":"Invalid invite code"}""")
+        old.onFailure(socket, IllegalStateException("old socket"), null)
+        assertEquals(3, pending.size)
+        old.close()
+        pending.forEach { it() }
+        assertEquals(emptyList<String>(), heard.events)
+    }
 
     @Test
     fun aRelaunchedAppResumesTheSessionItSavedSoTheHostCanFinishTheReply() {
@@ -63,7 +92,7 @@ class AgentLinkTest {
 
     // The host's exact text: connectonion 1.9.3rc41 network/trust/ws_admin.py:101 sends
     // {"type": "ERROR", "message": "Invalid invite code"} and prints "✗ Invalid invite code from 0x…" (:98).
-    // The relay keeps the refused socket open (seen 80 s+), so the link drops it itself and the 5 s retry can run.
+    // The relay keeps the refused socket open (seen 80 s+), so the link drops it and lets the caller decide whether to retry.
     @Test
     fun aRefusedInviteCodeIsReportedAsRefusedAndTheSocketDropped() {
         val socket = Sent()
@@ -97,5 +126,15 @@ class AgentLinkTest {
     fun anyOtherErrorStillReachesTheListener() {
         link.onMessage(Sent(), """{"type":"ERROR","message":"Agent completed without result"}""")
         assertEquals(listOf("error"), heard.events)
+    }
+
+    // connectonion establish_connection sends server_newer, session and chat_items when the stored session is newer.
+    @Test
+    fun connectedCarriesTheConversation() {
+        link.onMessage(Sent(), """{"type":"CONNECTED","session_id":"s1","status":"connected","server_newer":true,"session":{},
+            "chat_items":[{"id":"msg-0","type":"user","content":"q"},{"id":"t","type":"tool_call","name":"x"},{"id":"msg-2","type":"agent","content":"a"}]}""")
+        assertEquals(listOf(true to "q", false to "a"), heard.history)
+        link.onMessage(Sent(), """{"type":"CONNECTED","session_id":"s1","status":"connected"}""")
+        assertEquals(emptyList<Pair<Boolean, String>>(), heard.history)
     }
 }

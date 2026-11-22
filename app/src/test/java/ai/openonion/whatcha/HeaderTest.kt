@@ -25,11 +25,12 @@ class HeaderTest {
         assertEquals("小乐", headerTitle("小乐", listOf(asked(Delivery.FAILED)), Status.ONLINE))
     }
 
-    // WeChat's cold launch says 「微信(连接中…)」 in the title and shows nothing red; a reply on its way still wins.
+    // WeChat's cold launch says 「微信(连接中…)」 in the title and shows nothing red. A question still SENT from before
+    // does not make it 对方正在输入...: until CONNECTED nobody knows the Mac is there (round 30: 5 min with a frozen host).
     @Test
     fun whileConnectingTheTitleSaysSoLikeWeChat() {
         assertEquals("小乐(连接中…)", headerTitle("小乐", emptyList(), Status.CONNECTING))
-        assertEquals("对方正在输入...", headerTitle("小乐", listOf(asked(Delivery.SENT)), Status.CONNECTING))
+        assertEquals("小乐(连接中…)", headerTitle("小乐", listOf(asked(Delivery.SENT)), Status.CONNECTING))
     }
 
     // The strip under the title says 暂时联系不上; a title saying the other side is typing would contradict it.
@@ -44,11 +45,11 @@ class HeaderTest {
         assertEquals("暂时联系不上，\n稍后会自己重试", statusText(Status.OFFLINE))
     }
 
-    // Two clauses, the second eight characters: at the largest font the text column beside the 36dp ! is 315dp,
-    // and nine characters of 35dp wrapped the last one onto a third line. Two lines at both scales, not a poem.
+    // Each clause stays on its own line, including at large system font sizes.
     @Test
-    fun theUnpairedSentenceBreaksIntoShortClauses() {
-        assertEquals("还没连上，\n让孩子重发安装包", statusText(Status.UNPAIRED))
+    fun anUnpairedPhoneHasNoErrorStrip() {
+        assertNull(statusText(Status.UNPAIRED))
+        assertEquals("口令过期或用过了，\n请孩子重新发一条", statusText(Status.REFUSED))
     }
 
     // The strip is only for trouble, as WeChat's is only for 网络不可用; connecting is said in the title.
@@ -56,5 +57,12 @@ class HeaderTest {
     fun nothingToSayWhileOnline() {
         assertNull(statusText(Status.ONLINE))
         assertNull(statusText(Status.CONNECTING))
+    }
+
+    // A warm open after the phone was off the network looks like a cold open: 连接中 in the title, no strip.
+    @Test
+    fun comingBackWhileOfflineLooksLikeAColdOpen() {
+        assertEquals("小乐(连接中…)", headerTitle("小乐", listOf(asked(Delivery.DONE)), shownOnReturn(Status.OFFLINE)))
+        assertNull(statusText(shownOnReturn(Status.OFFLINE)))
     }
 }

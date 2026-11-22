@@ -15,6 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -60,6 +68,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -93,6 +102,8 @@ fun ChatScreen(vm: ChatViewModel) {
     val lines by vm.lines.collectAsState()
     val title by vm.title.collectAsState()
     val status by vm.status.collectAsState()
+    val pairing by vm.pairing.collectAsState()
+    val pairingHint by vm.pairingHint.collectAsState()
     val voiceMode by vm.voiceMode.collectAsState()
     val recording by vm.recording.collectAsState()
     var viewing by remember { mutableStateOf<String?>(null) }
@@ -102,15 +113,49 @@ fun ChatScreen(vm: ChatViewModel) {
             Column(Modifier.fillMaxSize()) {
                 Header(headerTitle(title, lines, status))
                 statusText(status)?.let { StatusStrip(it) }
-                val hint = emptyHint(title, lines, status)
-                if (hint != null) EmptyHint(hint, Modifier.weight(1f))
-                else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onView = { viewing = it }, onRetry = vm::retry, modifier = Modifier.weight(1f))
-                if (status != Status.UNPAIRED) Composer(vm, voiceMode, recording)
+                if (canPastePairing(pairing, status)) {
+                    PairingPrompt({ vm.pastePairing(fromButton = true) }, pairingHint, Modifier.weight(1f))
+                }
+                else {
+                    val hint = emptyHint(title, lines, status)
+                    if (hint != null) EmptyHint(hint, Modifier.weight(1f))
+                    else Conversation(lines, title, onReplay = vm::replay, onPlay = vm::playVoice, onView = { viewing = it }, onRetry = vm::retry, modifier = Modifier.weight(1f))
+                    if (status != Status.REFUSED) Composer(vm, voiceMode, recording)
+                }
             }
             if (recording) RecordingCard(Modifier.align(Alignment.Center))
         }
         // Outside the padded box so the black reaches every edge of the screen, as WeChat's viewer does.
         viewing?.let { PhotoViewer(it, onClose = { viewing = null }) }
+    }
+}
+
+@Composable
+private fun PairingPrompt(onPaste: () -> Unit, hint: String?, modifier: Modifier) {
+    Box(modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(PAIRING_PROMPT, style = Body, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(32.dp))
+            PastePairing(onPaste)
+            hint?.let {
+                Spacer(Modifier.height(12.dp))
+                Text(it, style = Small, textAlign = TextAlign.Center)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PastePairing(onPaste: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier.fillMaxWidth().heightIn(min = TargetSize).background(Green, RoundedCornerShape(6.dp))
+            .clickable(role = Role.Button) { onPaste() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("我复制好了", style = Body.copy(color = Color.White), modifier = Modifier.padding(vertical = 12.dp))
     }
 }
 
@@ -161,11 +206,14 @@ private fun StatusStrip(text: String) {
 }
 
 // A blank grey page gives a parent no reason to type; say what this is for until the first message.
-// With no line yet the grey middle says what the parent does next: ask, or, while the Mac has not accepted
-// this phone's invite code, call the child. With history the history is the page (11d).
+// With no line yet the grey middle says what the parent does next. Pending pairings show the paste prompt.
+// With history the history is the page (11d).
+internal const val PAIRING_PROMPT = "请孩子在微信里发来口令，\n长按复制，再回到这里"
+
 internal fun emptyHint(name: String, lines: List<Line>, status: Status): String? = when {
     lines.isNotEmpty() -> null
-    status == Status.UNPAIRED -> "给孩子打个电话"
+    status == Status.UNPAIRED -> PAIRING_PROMPT
+    status == Status.REFUSED -> PAIRING_PROMPT
     else -> "想知道孩子在干嘛，\n就在下面问$name，\n打字说话都行"
 }
 
@@ -177,10 +225,12 @@ private fun EmptyHint(hint: String, modifier: Modifier) {
 }
 
 // WeChat's own words: 「对方正在输入...」 while the other side is writing, 「微信(连接中…)」 in the title on a cold
-// launch, so the parent knows to wait and sees nothing red. CONNECTING only ever means that first connection.
-// While OFFLINE the strip says 暂时联系不上, so nobody is typing; the question keeps its grey circle.
+// launch, so the parent knows to wait and sees nothing red. CONNECTING means a try the parent is waiting on: the
+// first launch, or coming back to the screen, and it lasts at most CONNECT_DEADLINE_MS.
+// Only ONLINE says someone is typing: until CONNECTED nobody knows the Mac is there, and while OFFLINE the strip
+// says 暂时联系不上. The question keeps its grey circle.
 internal fun headerTitle(name: String, lines: List<Line>, status: Status): String = when {
-    lines.any { it.delivery == Delivery.SENT } && status != Status.OFFLINE -> "对方正在输入..."
+    lines.any { it.delivery == Delivery.SENT } && status == Status.ONLINE -> "对方正在输入..."
     status == Status.CONNECTING -> "$name(连接中…)"
     else -> name
 }
@@ -189,7 +239,8 @@ internal fun headerTitle(name: String, lines: List<Line>, status: Status): Strin
 // sentence, never an error code. One clause per line: at the largest system font a clause of eight characters
 // still fits beside the !, a ninth wrapped onto a third line and a whole sentence wrapped mid-word.
 internal fun statusText(status: Status): String? = when (status) {
-    Status.UNPAIRED -> "还没连上，\n让孩子重发安装包"
+    Status.UNPAIRED -> null
+    Status.REFUSED -> "口令过期或用过了，\n请孩子重新发一条"
     Status.CONNECTING -> null
     Status.ONLINE -> null
     Status.OFFLINE -> "暂时联系不上，\n稍后会自己重试"
@@ -362,17 +413,47 @@ private fun Avatar(@DrawableRes picture: Int, who: String) {
 private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) {
     val context = LocalContext.current
     val activity = context as Activity
+    var micDialog by rememberSaveable { mutableStateOf(false) }
+    var callDialog by rememberSaveable { mutableStateOf(false) }
+    // A press refused because a call holds the mic; the dialog waits for the finger to lift.
+    var refusedForCall by remember { mutableStateOf(false) }
+    // Survives the process dying while the parent is in Settings; only our 去设置 sets it.
+    var sentToSettings by rememberSaveable { mutableStateOf(false) }
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        val canAskAgain = activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
-        when (afterMicAnswer(granted, canAskAgain)) {
+        val rationale = activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)
+        val step = afterMicAnswer(granted, rationale, vm.saidNoToMic)
+        if (rationale) vm.rememberSaidNoToMic()
+        when (step) {
             MicStep.TALK -> vm.setVoiceMode(true)
             MicStep.ASK_AGAIN -> Toast.makeText(context, MIC_ASK_AGAIN, Toast.LENGTH_LONG).show()
-            MicStep.OPEN_SETTINGS -> openAppSettings(activity)
+            MicStep.OPEN_SETTINGS -> micDialog = true
         }
     }
     val micAllowed = { context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED }
+    // Rationale already true before the ask is a No on record too: the switch turned off in Settings, where one more
+    // No ends the asking with rationale false, so without this the dialog would never come.
+    val askForMic = {
+        if (activity.shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) vm.rememberSaidNoToMic()
+        askMic.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    // Runs on every resume; reads the state then, so a parent who chose typing is only switched after our 去设置.
+    LifecycleResumeEffect(Unit) {
+        if (sentToSettings && micAllowed()) vm.setVoiceMode(true)
+        sentToSettings = false
+        onPauseOrDispose {}
+    }
+    if (micDialog) MicDialog(
+        onCancel = { micDialog = false },
+        onGo = { micDialog = false; sentToSettings = true; openAppSettings(activity) },
+    )
+    if (callDialog) CallDialog(onClose = { callDialog = false })
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) vm.sendPhoto(uri) }
     var draft by rememberSaveable { mutableStateOf("") }
+    // Parents come back to read the answer, so the box lets go of focus when the app leaves the screen: no keyboard
+    // over the chat on return. The draft stays; one tap brings the keys. stateAlwaysHidden would hide the keys but
+    // keep the focus and the cursor (30f). Android's snapshot is taken before this runs, even on ON_PAUSE (30e).
+    val focusManager = LocalFocusManager.current
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { focusManager.clearFocus() }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
     Row(
         Modifier.fillMaxWidth().background(BarBackground).padding(horizontal = 12.dp, vertical = 10.dp),
@@ -380,7 +461,7 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
     ) {
         Box(
             Modifier.size(TargetSize).clickable {
-                if (voiceMode || micAllowed()) vm.setVoiceMode(!voiceMode) else askMic.launch(Manifest.permission.RECORD_AUDIO)
+                if (voiceMode || micAllowed()) vm.setVoiceMode(!voiceMode) else askForMic()
             },
             contentAlignment = Alignment.Center,
         ) {
@@ -394,8 +475,18 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
         if (voiceMode) HoldToTalk(
             recording,
             // The permission can go between launches (a one-time grant, the phone's own cleanup): ask, never record without it.
-            onPress = { if (micAllowed()) vm.startRecording() else askMic.launch(Manifest.permission.RECORD_AUDIO) },
-            onRelease = vm::stopRecording, modifier = Modifier.weight(1f))
+            // Ask once the finger is up: a system question opened under a held finger made the app "not responding".
+            // A call gives a second recorder silence, so say so instead of sending a quiet message.
+            onPress = {
+                refusedForCall = micAllowed() && vm.callHasMic
+                if (micAllowed() && !refusedForCall) vm.startRecording()
+            },
+            onRelease = {
+                vm.stopRecording()
+                if (!micAllowed()) askForMic()
+                if (refusedForCall) callDialog = true
+            },
+            modifier = Modifier.weight(1f))
         else TypeBox(draft, onChange = { draft = it }, modifier = Modifier.weight(1f))
         Spacer(Modifier.width(8.dp))
         if (voiceMode || draft.isBlank()) PickPhoto { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
@@ -405,8 +496,42 @@ private fun Composer(vm: ChatViewModel, voiceMode: Boolean, recording: Boolean) 
 
 /** The phone's own page for this app, where 权限 → 麦克风 is switched back on. */
 private fun openAppSettings(activity: Activity) {
-    Toast.makeText(activity, MIC_OPEN_SETTINGS, Toast.LENGTH_LONG).show()
     activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null)))
+}
+
+/** WeChat's refused-mic dialog (WeUI): the steps in large type, then 取消 and 去设置 sharing the width. Back or a tap outside is 取消. */
+@Composable
+private fun MicDialog(onCancel: () -> Unit, onGo: () -> Unit) {
+    Dialog(onDismissRequest = onCancel) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White)) {
+            Text(MIC_SETTINGS_STEPS, style = Body, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                DialogButton("取消", Body, Modifier.weight(1f), onCancel)
+                Box(Modifier.width(1.dp).fillMaxHeight().background(Divider))
+                DialogButton("去设置", Body.copy(color = Color(0xFF576B95), fontWeight = FontWeight.Medium), Modifier.weight(1f), onGo)
+            }
+        }
+    }
+}
+
+/** Like WeChat during a call: the mic is busy, said in large type, with one 知道了. Back or a tap outside closes it too. */
+@Composable
+private fun CallDialog(onClose: () -> Unit) {
+    Dialog(onDismissRequest = onClose) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White)) {
+            Text(MIC_IN_CALL, style = Body, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Divider))
+            DialogButton("知道了", Body.copy(color = Color(0xFF576B95), fontWeight = FontWeight.Medium), Modifier.fillMaxWidth(), onClose)
+        }
+    }
+}
+
+@Composable
+private fun DialogButton(label: String, style: TextStyle, modifier: Modifier, onTap: () -> Unit) {
+    Box(modifier.heightIn(min = 60.dp).clickable(role = Role.Button) { onTap() }, contentAlignment = Alignment.Center) {
+        Text(label, style = style, modifier = Modifier.padding(vertical = 12.dp))
+    }
 }
 
 @Composable
