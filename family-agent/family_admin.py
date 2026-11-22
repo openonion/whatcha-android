@@ -19,7 +19,7 @@ from connectonion.network.host.session.ui import session_to_chat_items
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
-from ticket import issue_ticket, read_tickets, ticket_available
+from ticket import address_revoked, edit_tickets, issue_ticket, read_tickets, ticket_available
 
 
 class ChildMessages:
@@ -162,7 +162,7 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
                 self.respond(401, {"error": "Invalid parent proof"})
                 return
             if parent not in paired_addresses(directory):
-                self.respond(403, {"error": "Parent is not paired"})
+                self.respond(403, {"revoked": address_revoked(directory, parent)})
                 return
             self.respond(200, {"messages": child_messages.list(parent, after)})
 
@@ -181,6 +181,9 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
             if self.path == "/family/child-messages":
                 self.send_message()
                 return
+            if self.path == "/family/revoke":
+                self.revoke()
+                return
             if self.path != "/family/invitations":
                 self.respond(404, {"error": "Not found"})
                 return
@@ -198,6 +201,25 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
             if parent_origin:
                 invite = f"家庭消息：{parent_origin}\n{invite}"
             self.respond(201, {"invitation": f"孩子名字：{child_name}\n{invite}"})
+
+        def revoke(self) -> None:
+            try:
+                identifier = self.json_body(1024).get("id")
+                if not isinstance(identifier, str):
+                    raise ValueError
+            except ValueError:
+                self.respond(400, {"error": "Invalid member"})
+                return
+            found = False
+            with edit_tickets(directory) as tickets:
+                for code, record in tickets.items():
+                    if record.get("reusable"):
+                        continue
+                    member_id = record.get("address") or hashlib.sha256(code.encode()).hexdigest()
+                    if member_id == identifier:
+                        record["revoked_at"] = time.time()
+                        found = True
+            self.respond(200 if found else 404, {"id": identifier})
 
         def send_message(self) -> None:
             try:

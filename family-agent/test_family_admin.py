@@ -8,7 +8,7 @@ from uuid import uuid4
 from connectonion.network.host.session.storage import Session, SessionStorage
 from nacl.signing import SigningKey
 
-from family_admin import handler_for
+from family_admin import ChildMessages, handler_for
 from ticket import edit_tickets
 
 
@@ -106,10 +106,12 @@ def test_direct_messages_are_idempotent_persistent_and_visible_only_to_recipient
             assert get_after(message["sequence"]) == (200, {"messages": []})
             assert get_after(0, stranger)[0] == 403
             assert get_after(0, timestamp=1)[0] == 401
-            from family_admin import ChildMessages
             assert ChildMessages(tmp_path).list(parent) == [message]
-            with edit_tickets(tmp_path) as tickets:
-                tickets["accepted"]["revoked_at"] = time.time()
+            connection.request("POST", "/family/revoke", json.dumps({"id": parent}),
+                               {"Authorization": "Bearer admin"})
+            revoked = connection.getresponse()
+            assert revoked.status == 200
+            revoked.read()
             assert get_after(0)[0] == 403
             assert send("撤销后") == 404
         finally:
