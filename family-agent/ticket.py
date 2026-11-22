@@ -36,7 +36,13 @@ def edit_tickets(co_dir):
 
 def ticket_available(record, now):
     unused = record.get("reusable") or record["used_at"] is None
-    return unused and 0 <= now - record["created_at"] < TICKET_SECONDS
+    return not record.get("revoked_at") and unused and 0 <= now - record["created_at"] < TICKET_SECONDS
+
+
+def address_revoked(co_dir, address):
+    matches = [record for record in read_tickets(co_dir).values()
+               if record.get("address") == address and not record.get("reusable")]
+    return bool(matches) and all(record.get("revoked_at") for record in matches)
 
 
 def issue_ticket(co_dir, address, label, reusable=False):

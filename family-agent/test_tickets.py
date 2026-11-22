@@ -62,6 +62,20 @@ def test_refuse_second_use_after_restart(family):
     assert restarted.should_allow(CLIENT).allow
 
 
+def test_revoke_blocks_a_contact_and_a_pending_invite(family):
+    co_dir, trust, tickets = family
+    paired = issue(family)
+    pending = issue(family)
+    assert trust.verify_invite(CLIENT, paired)
+    with tickets.edit_tickets(co_dir) as records:
+        for record in records.values():
+            record["revoked_at"] = time.time()
+    assert not trust.should_allow(CLIENT).allow
+    assert not trust.verify_invite(OTHER, pending)
+    assert trust.verify_invite(CLIENT, issue(family))
+    assert trust.should_allow(CLIENT).allow
+
+
 def test_week_old_ticket_still_admits(family):
     co_dir, trust, _ = family
     token = issue(family)

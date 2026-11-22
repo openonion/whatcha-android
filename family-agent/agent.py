@@ -8,7 +8,7 @@ from connectonion.network.trust import TrustAgent
 from connectonion.network.trust.trust_agent import Decision
 from connectonion.network.trust.ws_admin import get_onboard_requirements
 
-from ticket import edit_tickets, read_tickets, ticket_available
+from ticket import address_revoked, edit_tickets, read_tickets, ticket_available
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "skills/xiaole"))
@@ -31,6 +31,8 @@ class FamilyTrust(TrustAgent):
         return {**config, "onboard": onboard}
 
     def should_allow(self, client_id, request=None):
+        if address_revoked(self._co_dir, client_id):
+            return Decision(allow=False, reason="Family pairing revoked")
         if self.get_level(client_id) == "stranger" and get_onboard_requirements(self):
             return Decision(allow=False, reason="Onboard required")
         return super().should_allow(client_id, request)
@@ -55,6 +57,12 @@ def refresh_prompt(agent):
     agent.current_session["messages"][0] = {"role": "system", "content": agent.system_prompt}
 
 
+def require_current_pairing(agent):
+    requester = (agent.current_session.get("requester") or {}).get("address")
+    if requester and address_revoked(HERE / ".co", requester):
+        raise PermissionError("Family pairing revoked")
+
+
 def main():
     from child import tell_child
     from rem import recent_sessions, search_notebook, show_page
@@ -62,7 +70,7 @@ def main():
 
     skill = (HERE.parent / "skills/xiaole/SKILL.md").read_text().split("---", 2)[2]
     agent = Agent("小乐", system_prompt=skill, tools=[transcribe_voice, recent_sessions, show_page, search_notebook, tell_child],
-                  on_events=[refresh_prompt])
+                  on_events=[before_llm(require_current_pairing), refresh_prompt])
     host(agent, trust=FamilyTrust(co_dir=HERE / ".co"), co_dir=HERE / ".co")
 
 
