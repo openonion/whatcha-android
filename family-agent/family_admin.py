@@ -18,6 +18,7 @@ from connectonion.network.host.session.storage import SessionStorage, session_ow
 from connectonion.network.host.session.ui import session_to_chat_items
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
+from handoffs import Handoffs
 
 from ticket import address_revoked, edit_tickets, issue_ticket, read_tickets, ticket_available
 
@@ -97,6 +98,7 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
                 parent_origin: str | None = None):
     expected = f"Bearer {token}".encode()
     child_messages = ChildMessages(directory)
+    handoffs = Handoffs(directory)
 
     class Handler(BaseHTTPRequestHandler):
         def respond(self, status: int, body: dict) -> None:
@@ -142,7 +144,10 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
             if self.path != "/family":
                 self.respond(404, {"error": "Not found"})
                 return
-            self.respond(200, family_overview(directory, storage))
+            overview = family_overview(directory, storage)
+            paired = paired_addresses(directory)
+            overview["handoffs"] = [item for item in handoffs.pending() if item["parent"] in paired]
+            self.respond(200, overview)
 
         def read_messages(self, path) -> None:
             parent = self.headers.get("X-Whatcha-Parent", "")
@@ -184,6 +189,19 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
             if self.path == "/family/revoke":
                 self.revoke()
                 return
+            if self.path == "/family/notifications":
+                self.notifications()
+                return
+            if self.path == "/family/resolve-handoff":
+                try:
+                    item_id = self.json_body(1024).get("id")
+                    if type(item_id) is not int or not 0 < item_id < 2**63:
+                        raise ValueError
+                except ValueError:
+                    self.respond(400, {"error": "Invalid handoff"})
+                    return
+                self.respond(200 if handoffs.resolve(item_id) else 404, {"id": item_id})
+                return
             if self.path != "/family/invitations":
                 self.respond(404, {"error": "Not found"})
                 return
@@ -201,6 +219,20 @@ def handler_for(directory: Path, address: str, token: str, storage: SessionStora
             if parent_origin:
                 invite = f"家庭消息：{parent_origin}\n{invite}"
             self.respond(201, {"invitation": f"孩子名字：{child_name}\n{invite}"})
+
+        def notifications(self) -> None:
+            try:
+                body = self.json_body(1024)
+                token, enabled = body.get("token"), body.get("enabled")
+                if not isinstance(token, str) or not re.fullmatch(r"(?:[0-9a-f]{2}){16,256}", token):
+                    raise ValueError
+                if type(enabled) is not bool:
+                    raise ValueError
+            except ValueError:
+                self.respond(400, {"error": "Invalid device registration"})
+                return
+            handoffs.device(token, enabled)
+            self.respond(200, {"enabled": enabled})
 
         def revoke(self) -> None:
             try:
