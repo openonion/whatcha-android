@@ -100,6 +100,7 @@ def test_family_overview_preserves_three_quick_turns_with_trace_timestamps(tmp_p
     before = deepcopy(record.session)
     [conversation] = family_overview(tmp_path, storage)["conversations"]
     assert conversation["messages"] == expected
+
     assert record.session == before
 
     # A missing result must not borrow the timestamp from the following turn.
@@ -107,6 +108,15 @@ def test_family_overview_preserves_three_quick_turns_with_trace_timestamps(tmp_p
     del expected[3]["at"]
     [conversation] = family_overview(tmp_path, storage)["conversations"]
     assert conversation["messages"] == expected
+
+    record.session["messages"][1:1] = [
+        {"role": "user", "content": "Old question"},
+        {"role": "assistant", "content": "Old answer"},
+    ]
+    [conversation] = family_overview(tmp_path, storage)["conversations"]
+    messages = conversation["messages"]
+    assert all("at" not in message for message in messages[:2])
+    assert [message.get("at") for message in messages[2:]] == [message.get("at") for message in expected]
 
 
 def test_direct_messages_are_idempotent_persistent_and_visible_only_to_recipient(tmp_path):

@@ -68,20 +68,28 @@ def _chat_timestamps(session: dict) -> dict[tuple[str, str], int]:
     messages = session.get("messages", [])
     trace = session.get("trace", [])
     inputs = [event for event in trace if event.get("type") == "user_input"]
-    # Injected reminders have no input event. If the counts still differ,
-    # the trace cannot be aligned to the message history by position.
-    if len(inputs) != sum(msg.get("role") == "user" and not msg.get("internal") for msg in messages):
-        return {}
+    user_indices = [index for index, msg in enumerate(messages)
+                    if msg.get("role") == "user" and not msg.get("internal")]
+    if len(inputs) == len(user_indices):
+        input_by_index = dict(zip(user_indices, inputs))
+    else:
+        # Resumed legacy histories can have an untraced prefix. Recover only
+        # the contiguous suffix whose text also agrees with the host trace.
+        input_by_index = {}
+        for index, event in zip(reversed(user_indices), reversed(inputs)):
+            prompt = event.get("content")
+            if not isinstance(prompt, str) or prompt != messages[index].get("content"):
+                break
+            input_by_index[index] = event
     results = {event["turn"]: event for event in trace
                if event.get("type") == "turn_result" and type(event.get("turn")) is int}
 
     timestamps = {}
-    next_input = iter(inputs)
     result = {}
     for index, msg in enumerate(messages):
         item_id = f"msg-{index}"
         if msg.get("role") == "user" and not msg.get("internal"):
-            event = next(next_input)
+            event = input_by_index.get(index, {})
             turn = event.get("turn")
             result = results.get(turn, {}) if type(turn) is int else {}
             sender = "user"
