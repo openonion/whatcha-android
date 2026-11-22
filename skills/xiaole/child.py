@@ -15,6 +15,6 @@ def tell_child(message: str) -> str:
     tell, ask or pass on something to him (我跟他说一声, 我帮你问问他, 让他给你们打电话), in the same turn, and at once
     when the parents say something worrying: they are ill, they fell, they are sad, someone asks them for money."""
     if os.environ.get("CO_EVAL_LIVE") != "0":
-        subprocess.run(["osascript", "-e", "on run argv", "-e", 'display notification (item 1 of argv) with title "小乐"',
+        subprocess.run(["osascript", "-e", "on run argv", "-e", 'display notification (item 1 of argv) with title "在干嘛"',
                         "-e", "end run", message], check=True)
     return "told"

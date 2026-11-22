@@ -62,6 +62,29 @@ Parents far away: send `whatcha.apk` and the ticket message into your WeChat cha
 
 ## Smoke test
 
+### Use the iPhone child app
+
+Run `family-agent/family_admin.py` beside the family host with the same
+`.co` directory. Provision a trusted HTTPS certificate and an independent
+random `WHATCHA_FAMILY_ADMIN_TOKEN` for the child. Use `--parent-origin`
+to advertise the HTTPS origin reachable by the parent. New invitations include
+this origin and the child-selected display name. Use only the complete
+invitation when pairing.
+
+Set `WHATCHA_REPLY_STYLE_FILE` to the child's approved tone examples and
+`WHATCHA_SHARED_REM` to a curated export of notes the child agrees to share.
+The shared export can contain `sessions/` and project pages. The host uses only
+this export in family voice mode.
+
+For iPhone reminders, configure the family host process with the PEM
+certificate and key paths in `WHATCHA_APNS_CERT` and `WHATCHA_APNS_KEY`.
+Set `WHATCHA_APNS_SANDBOX=1` for development-signed builds. The host needs
+an HTTP/2-enabled curl. The optional push only announces that a family request
+is waiting. The child can fetch its content from the authenticated inbox.
+
+Host maintenance stays with the family host operator. Use `co host --status`
+to check its health. Use the child conversation to send family news deliberately.
+
 1. `curl -s localhost:8000/info` answers with your address and `"name": "小乐"`.
 2. On an unpaired phone, long-press the ticket message in WeChat → Copy → open 在干嘛. It should connect without a tap; if automatic clipboard access is blocked, tap 我复制好了. Then type 「在干嘛」, and the reply comes from 小乐, opening 「叔叔阿姨好，我是小乐，你儿子请的 AI。」 once and then something from the notebook; a reply that introduces 小乐 again on the next message is the bug to report. The host log shows one `INPUT` line per message.
 3. The title drops 「(连接中…)」 within seconds. Check `.co/tickets.json` for the family label, joined address and `used_at`. If the strip says 「口令过期或用过了，\n请孩子重新发一条」, issue a fresh ticket and send it in WeChat. Before the first accepted connection, the parent can copy it and return, or tap 我复制好了 under the strip, to replace the refused pairing immediately. This also works for a refused legacy packed pairing. The first `CONNECTED` makes pairing permanent; later clipboard text cannot replace it. Existing saved pairings without an acceptance flag are kept and gain the flag on their next connection. For a legacy packed APK, also check that its invite matches `CO_INVITE_CODE`.
